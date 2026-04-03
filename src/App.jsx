@@ -21,7 +21,20 @@ const MOCK_RECON_ITEMS = [
 ];
 
 // --- Login Screen ---
-function LoginScreen({ onLogin }) {
+function LoginScreen({ onLogin, onDevLogin }) {
+  const [creds, setCreds] = useState({ user: '', pass: '' });
+  const [error, setError] = useState('');
+
+  const handleDevLogin = (e) => {
+    e.preventDefault();
+    if (creds.user === 'admin' && creds.pass === 'admin') {
+      onDevLogin();
+    } else {
+      setError('Invalid credentials');
+      setTimeout(() => setError(''), 2000);
+    }
+  };
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-app)' }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -33,11 +46,13 @@ function LoginScreen({ onLogin }) {
           <img src="https://lever-client-logos.s3.us-west-2.amazonaws.com/939c1eda-6bdd-4f5f-b213-5316b3e62e2c-1695365909215.png" style={{ height: '24px' }} alt="Aleph" />
         </div>
         <h2 style={{ fontWeight: '800', fontSize: '1.5rem', letterSpacing: '-0.03em', marginBottom: '8px' }}>Recon Studio</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '2.5rem', lineHeight: '1.6' }}>
-          Twitter (X) Reconciliation & Follow-up<br />Management Platform
+        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '2rem', lineHeight: '1.6' }}>
+          Twitter (X) Reconciliation &amp; Follow-up<br />Management Platform
         </p>
-        <button onClick={onLogin} className="btn-premium btn-solid" style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '15px' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+        {/* Google Sign In */}
+        <button onClick={onLogin} className="btn-premium btn-solid" style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: '14px', marginBottom: '1.5rem' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -45,7 +60,33 @@ function LoginScreen({ onLogin }) {
           </svg>
           Sign in with Google
         </button>
-        <p style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '1.5rem' }}>Access restricted to Aleph Finance Operations team</p>
+
+        {/* Divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.5rem' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>OR TEST ACCESS</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+        </div>
+
+        {/* Dev Login Form */}
+        <form onSubmit={handleDevLogin} style={{ textAlign: 'left' }}>
+          <input
+            type="text" placeholder="Username" value={creds.user}
+            onChange={e => setCreds(p => ({ ...p, user: e.target.value }))}
+            style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border-strong)', borderRadius: '8px', fontSize: '14px', outline: 'none', marginBottom: '8px', fontFamily: 'var(--font-brand)' }}
+          />
+          <input
+            type="password" placeholder="Password" value={creds.pass}
+            onChange={e => setCreds(p => ({ ...p, pass: e.target.value }))}
+            style={{ width: '100%', padding: '10px 14px', border: `1px solid ${error ? '#FCA5A5' : 'var(--border-strong)'}`, borderRadius: '8px', fontSize: '14px', outline: 'none', marginBottom: '8px', fontFamily: 'var(--font-brand)' }}
+          />
+          {error && <p style={{ color: '#EF4444', fontSize: '12px', marginBottom: '8px' }}>{error}</p>}
+          <button type="submit" className="btn-premium btn-ghost" style={{ width: '100%', justifyContent: 'center', padding: '10px' }}>
+            Enter as Test User
+          </button>
+        </form>
+
+        <p style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '1.5rem' }}>Production access restricted to Aleph Finance Operations</p>
       </motion.div>
     </div>
   );
@@ -79,7 +120,8 @@ const BentoStat = ({ label, value, sub, icon: Icon }) => (
 
 // --- Main App ---
 function App() {
-  const [user, setUser] = useState(null);
+  const [firebaseUser, setFirebaseUser] = useState(null);
+  const [devUser, setDevUser] = useState(false); // test bypass
   const [authLoading, setAuthLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,14 +135,14 @@ function App() {
   // --- Auth listener ---
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
-      setUser(u);
+      setFirebaseUser(u);
       setAuthLoading(false);
     });
   }, []);
 
   // --- Firestore real-time listener ---
   useEffect(() => {
-    if (!user) return;
+    if (!firebaseUser && !devUser) return;
     const unsub = subscribeToItems((firestoreItems) => {
       if (firestoreItems.length > 0) {
         setItems(firestoreItems);
@@ -117,7 +159,9 @@ function App() {
     catch (e) { console.error(e); }
   };
 
-  const handleLogout = () => signOut(auth);
+  const handleDevLogin = () => setDevUser(true);
+
+  const handleLogout = () => { signOut(auth); setDevUser(false); };
 
   const handleFileUpload = async (type, file) => {
     setFiles(prev => ({ ...prev, [type]: file }));
@@ -167,13 +211,15 @@ function App() {
     catch (err) { console.error('Resolve error:', err); }
   };
 
-  if (authLoading) return (
+  const user = firebaseUser || (devUser ? { displayName: 'Admin', email: 'admin@aleph.test', photoURL: null } : null);
+
+  if (authLoading && !devUser) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-app)' }}>
       <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', color: 'var(--primary)' }} />
     </div>
   );
 
-  if (!user) return <LoginScreen onLogin={handleLogin} />;
+  if (!user) return <LoginScreen onLogin={handleLogin} onDevLogin={handleDevLogin} />;
 
   const filtered = items.filter(i =>
     (i.io || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -184,6 +230,7 @@ function App() {
   const errorCount = items.filter(i => i.status === 'Error').length;
   const fixingCount = items.filter(i => i.status === 'Fixing').length;
   const totalVolume = items.reduce((acc, i) => acc + (i.twBilling || 0), 0);
+
 
   return (
     <div className="dashboard-layout">
