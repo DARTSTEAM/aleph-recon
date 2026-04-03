@@ -49,48 +49,59 @@ export default function ReconciliationsView() {
         {/* SVG Line Chart */}
         {(() => {
           const runs = [...MOCK_RUNS].reverse();
-          const W = 100, H = 60;
+          const VW = 600, VH = 100;
+          const PAD = { top: 24, right: 20, bottom: 28, left: 10 };
+          const chartW = VW - PAD.left - PAD.right;
+          const chartH = VH - PAD.top - PAD.bottom;
           const minR = 93, maxR = 101;
-          const pts = runs.map((r, i) => ({
-            x: (i / (runs.length - 1)) * W,
-            y: H - ((r.matchRate - minR) / (maxR - minR)) * H,
-            run: r
-          }));
-          const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-          const areaD = `${pathD} L ${pts[pts.length-1].x} ${H} L 0 ${H} Z`;
+
+          const xOf = (i) => PAD.left + (i / (runs.length - 1)) * chartW;
+          const yOf = (rate) => PAD.top + chartH - ((rate - minR) / (maxR - minR)) * chartH;
+
+          const pts = runs.map((r, i) => ({ x: xOf(i), y: yOf(r.matchRate), run: r }));
+          const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+          const areaD = `${pathD} L${pts[pts.length - 1].x},${PAD.top + chartH} L${pts[0].x},${PAD.top + chartH} Z`;
+          const targetY = yOf(99);
 
           return (
-            <svg viewBox={`0 0 100 ${H + 20}`} style={{ width: '100%', height: '100px', overflow: 'visible' }} preserveAspectRatio="none">
+            <svg viewBox={`0 0 ${VW} ${VH}`} style={{ width: '100%', height: '110px' }}>
               <defs>
-                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#0037FF" stopOpacity="0.12" />
+                <linearGradient id="areaGrad2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#0037FF" stopOpacity="0.10" />
                   <stop offset="100%" stopColor="#0037FF" stopOpacity="0" />
                 </linearGradient>
-                {/* Target line at 99% */}
-                <line id="target" x1="0" y1={H - ((99 - minR) / (maxR - minR)) * H} x2="100" y2={H - ((99 - minR) / (maxR - minR)) * H} />
               </defs>
-              {/* Target 99% dashed */}
-              <line x1="0" y1={H - ((99 - minR) / (maxR - minR)) * H} x2="100" y2={H - ((99 - minR) / (maxR - minR)) * H}
-                stroke="#10B981" strokeWidth="0.4" strokeDasharray="2,1.5" opacity="0.5" />
-              <text x="101" y={H - ((99 - minR) / (maxR - minR)) * H + 1} fontSize="3.5" fill="#10B981" opacity="0.7">Target 99%</text>
-              {/* Area fill */}
-              <path d={areaD} fill="url(#areaGrad)" />
+
+              {/* Target 99% line */}
+              <line x1={PAD.left} y1={targetY} x2={VW - PAD.right - 2} y2={targetY}
+                stroke="#10B981" strokeWidth="0.8" strokeDasharray="4,3" opacity="0.6" />
+              <text x={VW - PAD.right + 2} y={targetY + 3} fontSize="8" fill="#10B981" opacity="0.7" fontFamily="system-ui">99%</text>
+
+              {/* Area */}
+              <path d={areaD} fill="url(#areaGrad2)" />
+
               {/* Line */}
-              <path d={pathD} fill="none" stroke="#0037FF" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
-              {/* Dots + Labels */}
-              {pts.map((p, i) => (
-                <g key={i}>
-                  <circle cx={p.x} cy={p.y} r="1.8" fill="white" stroke="#0037FF" strokeWidth="1" />
-                  <text x={p.x} y={H + 8} textAnchor="middle" fontSize="3.5" fill="#98A0B4" fontWeight="600">
-                    {p.run.label.split(' ')[0].slice(0, 3)}
-                  </text>
-                  <text x={p.x} y={p.y - 4} textAnchor="middle" fontSize="3.2"
-                    fill={p.run.matchRate >= 99 ? '#10B981' : p.run.matchRate >= 97 ? '#F59E0B' : '#EF4444'}
-                    fontWeight="700">
-                    {p.run.matchRate}%
-                  </text>
-                </g>
-              ))}
+              <path d={pathD} fill="none" stroke="#0037FF" strokeWidth="1.8"
+                strokeLinejoin="round" strokeLinecap="round" />
+
+              {/* Points + labels */}
+              {pts.map((p, i) => {
+                const color = p.run.matchRate >= 99 ? '#10B981' : p.run.matchRate >= 97 ? '#F59E0B' : '#EF4444';
+                return (
+                  <g key={i}>
+                    {/* Value label above dot */}
+                    <text x={p.x} y={p.y - 6} textAnchor="middle" fontSize="8.5" fill={color} fontWeight="700" fontFamily="system-ui">
+                      {p.run.matchRate}%
+                    </text>
+                    {/* Dot */}
+                    <circle cx={p.x} cy={p.y} r="3.5" fill="white" stroke="#0037FF" strokeWidth="1.5" />
+                    {/* Month label below */}
+                    <text x={p.x} y={VH - 4} textAnchor="middle" fontSize="8" fill="#98A0B4" fontFamily="system-ui" fontWeight="600">
+                      {p.run.label.split(' ')[0].slice(0, 3)}
+                    </text>
+                  </g>
+                );
+              })}
             </svg>
           );
         })()}
