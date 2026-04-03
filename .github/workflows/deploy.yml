@@ -7,12 +7,19 @@ on:
 
 env:
   PROJECT_ID: hike-fafo
-  SERVICE: aleph-automation
   REGION: us-central1
-  IMAGE: us-central1-docker.pkg.dev/hike-fafo/aleph-recon/app
+
+  # Frontend
+  FRONTEND_SERVICE: aleph-automation
+  FRONTEND_IMAGE: us-central1-docker.pkg.dev/hike-fafo/aleph-recon/app
+
+  # Backend API
+  API_SERVICE: aleph-recon-api
+  API_IMAGE: us-central1-docker.pkg.dev/hike-fafo/aleph-recon/api
 
 jobs:
-  deploy:
+  deploy-frontend:
+    name: Deploy Frontend
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,20 +40,71 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-      - name: Build Docker image
-        run: docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest .
-
-      - name: Push Docker image
+      - name: Build Frontend Docker image
         run: |
-          docker push $IMAGE:${{ github.sha }}
-          docker push $IMAGE:latest
+          docker build \
+            --build-arg VITE_API_URL=https://aleph-recon-api-4772ziyq2a-uc.a.run.app \
+            -t $FRONTEND_IMAGE:${{ github.sha }} \
+            -t $FRONTEND_IMAGE:latest \
+            .
 
-      - name: Deploy to Cloud Run
+      - name: Push Frontend Docker image
         run: |
-          gcloud run deploy $SERVICE \
-            --image $IMAGE:${{ github.sha }} \
+          docker push $FRONTEND_IMAGE:${{ github.sha }}
+          docker push $FRONTEND_IMAGE:latest
+
+      - name: Deploy Frontend to Cloud Run
+        run: |
+          gcloud run deploy $FRONTEND_SERVICE \
+            --image $FRONTEND_IMAGE:${{ github.sha }} \
             --platform managed \
             --region $REGION \
             --project $PROJECT_ID \
             --allow-unauthenticated \
+            --quiet
+
+  deploy-backend:
+    name: Deploy Backend API
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build Backend API Docker image
+        run: |
+          docker build \
+            -t $API_IMAGE:${{ github.sha }} \
+            -t $API_IMAGE:latest \
+            ./backend
+
+      - name: Push Backend API Docker image
+        run: |
+          docker push $API_IMAGE:${{ github.sha }}
+          docker push $API_IMAGE:latest
+
+      - name: Deploy Backend API to Cloud Run
+        run: |
+          gcloud run deploy $API_SERVICE \
+            --image $API_IMAGE:${{ github.sha }} \
+            --platform managed \
+            --region $REGION \
+            --project $PROJECT_ID \
+            --allow-unauthenticated \
+            --set-secrets "GMAIL_USER=aleph-gmail-user:latest,GMAIL_APP_PASSWORD=aleph-gmail-app-password:latest" \
+            --set-env-vars "ALLOWED_ORIGINS=https://aleph-automation-4772ziyq2a-uc.a.run.app" \
             --quiet
