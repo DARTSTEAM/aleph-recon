@@ -300,11 +300,7 @@ function App() {
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             {saving && <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}><RefreshCw size={14} className="animate-spin" /> Syncing...</span>}
-            <button className="btn-premium btn-solid" onClick={() => {
-              const el = document.createElement('input');
-              el.type = 'file';
-              el.click();
-            }}>
+            <button className="btn-premium btn-solid" onClick={() => setActiveView('sources')}>
               <DownloadCloud size={16} /> Import Dataset
             </button>
           </div>
@@ -366,7 +362,23 @@ function App() {
                   <Mail size={13} /> Bulk Notify ({errorCount})
                 </button>
               )}
-              <button className="btn-premium btn-solid" style={{ padding: '8px 14px', fontSize: '12px' }}>
+              <button className="btn-premium btn-solid" style={{ padding: '8px 14px', fontSize: '12px' }}
+                onClick={() => {
+                  const headers = ['IO Number', 'Account', 'Manager', 'SF Budget', 'Twitter Billing', 'Discrepancy', 'Category', 'Status', 'Comment'];
+                  const rows = items.map(i => [
+                    i.io, i.account, i.manager,
+                    i.sfBudget, i.twBilling, i.diff,
+                    i.category || '', i.status, i.comment || ''
+                  ]);
+                  const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `Aleph_Recon_Q1-2026_${new Date().toISOString().slice(0,10)}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}>
                 <FileText size={13} /> Export Report
               </button>
             </div>

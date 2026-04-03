@@ -1,6 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, DollarSign, Globe, FileText, Save, RefreshCw } from 'lucide-react';
+import { Settings, DollarSign, Globe, FileText, Save, CheckCircle2 } from 'lucide-react';
+
+const LS_KEY = 'aleph-recon-settings';
+
+const DEFAULT_SETTINGS = {
+  matchTolerance: '10.00',
+  escalationDays: '7',
+  errorThreshold: '3',
+  maxDiscrepancy: '5000',
+  exportFormat: 'xlsx',
+  namingConvention: 'AlephRecon_{period}_{date}',
+  ccEmail: 'finance-ops@alephholding.com',
+  baseCurrency: 'USD',
+  fxSource: 'Banco Nación (AR)',
+};
+
+const REGIONS_DEFAULT = [
+  { name: 'Argentina', currency: 'ARS', taxRate: '21', active: true },
+  { name: 'Mexico', currency: 'MXN', taxRate: '16', active: true },
+  { name: 'Brazil', currency: 'BRL', taxRate: '9.25', active: true },
+  { name: 'Chile', currency: 'CLP', taxRate: '19', active: true },
+  { name: 'Colombia', currency: 'COP', taxRate: '19', active: false },
+];
 
 const Section = ({ title, icon: Icon, children }) => (
   <div className="bento-card" style={{ marginBottom: '1.25rem' }}>
@@ -11,31 +33,35 @@ const Section = ({ title, icon: Icon, children }) => (
   </div>
 );
 
-const Field = ({ label, defaultValue, type = 'text', suffix }) => (
+const Field = ({ label, stateKey, value, onChange, type = 'text', suffix }) => (
   <div>
     <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>{label}</div>
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <input defaultValue={defaultValue} type={type} style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border-strong)', borderRadius: '8px', fontSize: '13px', fontFamily: 'var(--font-brand)', outline: 'none', color: 'var(--text-primary)' }} />
+      <input
+        value={value}
+        type={type}
+        onChange={e => onChange(stateKey, e.target.value)}
+        style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border-strong)', borderRadius: '8px', fontSize: '13px', fontFamily: 'var(--font-brand)', outline: 'none', color: 'var(--text-primary)' }}
+      />
       {suffix && <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>{suffix}</span>}
     </div>
   </div>
 );
 
-const REGIONS = [
-  { name: 'Argentina', currency: 'ARS', taxRate: '21', active: true },
-  { name: 'Mexico', currency: 'MXN', taxRate: '16', active: true },
-  { name: 'Brazil', currency: 'BRL', taxRate: '9.25', active: true },
-  { name: 'Chile', currency: 'CLP', taxRate: '19', active: true },
-  { name: 'Colombia', currency: 'COP', taxRate: '19', active: false },
-];
-
 export default function SettingsView() {
-  const [regions, setRegions] = useState(REGIONS);
+  const saved_raw = localStorage.getItem(LS_KEY);
+  const saved_data = saved_raw ? JSON.parse(saved_raw) : {};
+
+  const [cfg, setCfg] = useState({ ...DEFAULT_SETTINGS, ...saved_data.cfg });
+  const [regions, setRegions] = useState(saved_data.regions || REGIONS_DEFAULT);
   const [saved, setSaved] = useState(false);
 
+  const setField = (key, val) => setCfg(prev => ({ ...prev, [key]: val }));
+
   const handleSave = () => {
+    localStorage.setItem(LS_KEY, JSON.stringify({ cfg, regions }));
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => setSaved(false), 2500);
   };
 
   return (
@@ -44,20 +70,20 @@ export default function SettingsView() {
         <div>
           <Section title="Reconciliation Thresholds" icon={Settings}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <Field label="Match Tolerance (USD)" defaultValue="10.00" type="number" suffix="USD" />
-              <Field label="Auto-escalation (days)" defaultValue="7" type="number" suffix="days" />
-              <Field label="Error threshold (%)" defaultValue="3" type="number" suffix="%" />
-              <Field label="Max Discrepancy Alert" defaultValue="5000" type="number" suffix="USD" />
+              <Field label="Match Tolerance (USD)" stateKey="matchTolerance" value={cfg.matchTolerance} onChange={setField} type="number" suffix="USD" />
+              <Field label="Auto-escalation (days)" stateKey="escalationDays" value={cfg.escalationDays} onChange={setField} type="number" suffix="days" />
+              <Field label="Error threshold (%)" stateKey="errorThreshold" value={cfg.errorThreshold} onChange={setField} type="number" suffix="%" />
+              <Field label="Max Discrepancy Alert" stateKey="maxDiscrepancy" value={cfg.maxDiscrepancy} onChange={setField} type="number" suffix="USD" />
             </div>
           </Section>
 
           <Section title="Export Preferences" icon={FileText}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <Field label="Default Export Format" defaultValue="xlsx" />
-              <Field label="Report Naming Convention" defaultValue="AlephRecon_{period}_{date}" />
+              <Field label="Default Export Format" stateKey="exportFormat" value={cfg.exportFormat} onChange={setField} />
+              <Field label="Report Naming Convention" stateKey="namingConvention" value={cfg.namingConvention} onChange={setField} />
             </div>
             <div style={{ marginTop: '1rem' }}>
-              <Field label="CC Email on Export" defaultValue="finance-ops@alephholding.com" />
+              <Field label="CC Email on Export" stateKey="ccEmail" value={cfg.ccEmail} onChange={setField} />
             </div>
           </Section>
         </div>
@@ -67,10 +93,9 @@ export default function SettingsView() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '6px 0', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Region</th>
-                  <th style={{ textAlign: 'left', padding: '6px 0', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Currency</th>
-                  <th style={{ textAlign: 'left', padding: '6px 0', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tax Rate</th>
-                  <th style={{ textAlign: 'center', padding: '6px 0', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active</th>
+                  {['Region', 'Currency', 'Tax Rate', 'Active'].map((h, i) => (
+                    <th key={h} style={{ textAlign: i === 3 ? 'center' : 'left', padding: '6px 0', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -94,8 +119,8 @@ export default function SettingsView() {
 
           <Section title="Billing Currency" icon={DollarSign}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <Field label="Base Currency" defaultValue="USD" />
-              <Field label="FX Rate Source" defaultValue="Banco Nación (AR)" />
+              <Field label="Base Currency" stateKey="baseCurrency" value={cfg.baseCurrency} onChange={setField} />
+              <Field label="FX Rate Source" stateKey="fxSource" value={cfg.fxSource} onChange={setField} />
             </div>
           </Section>
         </div>
@@ -104,7 +129,7 @@ export default function SettingsView() {
       {/* Save Button */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
         <button className="btn-premium btn-solid" onClick={handleSave} style={{ padding: '12px 28px' }}>
-          {saved ? <><RefreshCw size={15} /> Saved!</> : <><Save size={15} /> Save Settings</>}
+          {saved ? <><CheckCircle2 size={15} /> Settings saved!</> : <><Save size={15} /> Save Settings</>}
         </button>
       </div>
     </motion.div>
