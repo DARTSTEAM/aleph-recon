@@ -29,25 +29,84 @@ export default function ReconciliationsView() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      {/* Trend Chart */}
+      {/* Trend Chart — SVG Sparkline */}
       <div className="bento-card" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span>Match Rate Trend</span>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>Last 5 periods</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: '700' }}>Match Rate Trend</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Last 5 billing periods</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '28px', fontWeight: '800', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+              {MOCK_RUNS[0].matchRate}%
+            </div>
+            <div style={{ fontSize: '11px', color: MOCK_RUNS[0].matchRate > MOCK_RUNS[1].matchRate ? '#EF4444' : '#10B981', fontWeight: '600' }}>
+              {MOCK_RUNS[0].matchRate > MOCK_RUNS[1].matchRate ? '▲' : '▼'} vs prev. period
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', height: '80px' }}>
-          {[...MOCK_RUNS].reverse().map((run) => (
-            <div key={run.id} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: run.matchRate >= 99 ? '#10B981' : run.matchRate >= 97 ? '#F59E0B' : '#EF4444' }}>
-                {run.matchRate}%
-              </div>
-              <div style={{
-                width: '100%', borderRadius: '6px 6px 0 0',
-                height: `${(run.matchRate / maxRate) * 70}px`,
-                background: run.matchRate >= 99 ? 'linear-gradient(135deg,#10B981,#34D399)' : run.matchRate >= 97 ? 'linear-gradient(135deg,#F59E0B,#FCD34D)' : 'linear-gradient(135deg,#EF4444,#FCA5A5)',
-                transition: 'all 0.4s ease'
-              }} />
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center' }}>{run.label.split(' ')[0]}</div>
+
+        {/* SVG Line Chart */}
+        {(() => {
+          const runs = [...MOCK_RUNS].reverse();
+          const W = 100, H = 60;
+          const minR = 93, maxR = 101;
+          const pts = runs.map((r, i) => ({
+            x: (i / (runs.length - 1)) * W,
+            y: H - ((r.matchRate - minR) / (maxR - minR)) * H,
+            run: r
+          }));
+          const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+          const areaD = `${pathD} L ${pts[pts.length-1].x} ${H} L 0 ${H} Z`;
+
+          return (
+            <svg viewBox={`0 0 100 ${H + 20}`} style={{ width: '100%', height: '100px', overflow: 'visible' }} preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#0037FF" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="#0037FF" stopOpacity="0" />
+                </linearGradient>
+                {/* Target line at 99% */}
+                <line id="target" x1="0" y1={H - ((99 - minR) / (maxR - minR)) * H} x2="100" y2={H - ((99 - minR) / (maxR - minR)) * H} />
+              </defs>
+              {/* Target 99% dashed */}
+              <line x1="0" y1={H - ((99 - minR) / (maxR - minR)) * H} x2="100" y2={H - ((99 - minR) / (maxR - minR)) * H}
+                stroke="#10B981" strokeWidth="0.4" strokeDasharray="2,1.5" opacity="0.5" />
+              <text x="101" y={H - ((99 - minR) / (maxR - minR)) * H + 1} fontSize="3.5" fill="#10B981" opacity="0.7">Target 99%</text>
+              {/* Area fill */}
+              <path d={areaD} fill="url(#areaGrad)" />
+              {/* Line */}
+              <path d={pathD} fill="none" stroke="#0037FF" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
+              {/* Dots + Labels */}
+              {pts.map((p, i) => (
+                <g key={i}>
+                  <circle cx={p.x} cy={p.y} r="1.8" fill="white" stroke="#0037FF" strokeWidth="1" />
+                  <text x={p.x} y={H + 8} textAnchor="middle" fontSize="3.5" fill="#98A0B4" fontWeight="600">
+                    {p.run.label.split(' ')[0].slice(0, 3)}
+                  </text>
+                  <text x={p.x} y={p.y - 4} textAnchor="middle" fontSize="3.2"
+                    fill={p.run.matchRate >= 99 ? '#10B981' : p.run.matchRate >= 97 ? '#F59E0B' : '#EF4444'}
+                    fontWeight="700">
+                    {p.run.matchRate}%
+                  </text>
+                </g>
+              ))}
+            </svg>
+          );
+        })()}
+
+        {/* Mini KPI row */}
+        <div style={{ display: 'flex', gap: '0', borderTop: '1px solid var(--border-subtle)', marginTop: '0.5rem', paddingTop: '1rem' }}>
+          {[
+            { label: 'Best Period', value: 'Dec 2025', sub: '100%', color: '#10B981' },
+            { label: 'Avg Match Rate', value: '97.2%', sub: 'Last 5 months', color: 'var(--primary)' },
+            { label: 'Total Errors', value: '33', sub: 'Cumulative', color: '#EF4444' },
+            { label: 'Total Volume', value: '$13.6M', sub: 'Billed (X)', color: 'var(--text-primary)' },
+          ].map(({ label, value, sub, color }, i, arr) => (
+            <div key={label} style={{ flex: 1, textAlign: 'center', borderRight: i < arr.length - 1 ? '1px solid var(--border-subtle)' : 'none', padding: '0 1rem' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>{label}</div>
+              <div style={{ fontSize: '20px', fontWeight: '800', color, letterSpacing: '-0.02em' }}>{value}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{sub}</div>
             </div>
           ))}
         </div>
