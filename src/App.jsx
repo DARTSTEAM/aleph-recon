@@ -10,6 +10,12 @@ import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, googleProvider } from './firebase';
 import { reconcileData, readExcelFile } from './utils/reconciler';
 import { subscribeToItems, saveReconciliationRun, updateItemStatus, resolveItem } from './utils/firestoreService';
+import ReconciliationsView from './views/ReconciliationsView';
+import DataSourcesView from './views/DataSourcesView';
+import CommercialTeamsView from './views/CommercialTeamsView';
+import NotificationsView from './views/NotificationsView';
+import SettingsView from './views/SettingsView';
+import HelpView from './views/HelpView';
 
 const MOCK_RECON_ITEMS = [
   { id: '1', io: 'TW-50473210', account: "L'Oréal Argentina", manager: 'Mariana Tunno', sfBudget: 12500, twBilling: 12500, diff: 0, status: 'Matched', category: 'Budget' },
@@ -106,19 +112,6 @@ const SidebarItem = ({ icon: Icon, label, active = false, onClick }) => (
   >
     <Icon size={17} /> {label}
   </div>
-);
-
-// --- Placeholder View ---
-const PlaceholderView = ({ title, icon: Icon, description }) => (
-  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', gap: '16px' }}>
-    <div style={{ padding: '20px', borderRadius: '16px', backgroundColor: '#F0F3FF', color: 'var(--primary)' }}>
-      <Icon size={32} />
-    </div>
-    <h2 style={{ fontWeight: '800', letterSpacing: '-0.03em' }}>{title}</h2>
-    <p style={{ color: 'var(--text-secondary)', maxWidth: '340px', lineHeight: '1.6' }}>{description}</p>
-    <div style={{ padding: '8px 16px', borderRadius: '8px', background: '#F0F3FF', color: 'var(--primary)', fontSize: '12px', fontWeight: '700' }}>Coming Soon</div>
-  </motion.div>
 );
 
 // --- Bento Stat Card ---
@@ -318,12 +311,12 @@ function App() {
         </header>
 
         {/* View Router */}
-        {activeView === 'recon' && <PlaceholderView title="Reconciliations" icon={Activity} description="Full history of all reconciliation runs, monthly comparisons, and variance reports." />}
-        {activeView === 'sources' && <PlaceholderView title="Data Sources" icon={Database} description="Connect and manage your Salesforce exports, Twitter Billing files and Partner Statements here." />}
-        {activeView === 'teams' && <PlaceholderView title="Commercial Teams" icon={Users} description="Manage commercial team contacts, assign error ownership, and track follow-up accountability." />}
-        {activeView === 'notifications' && <PlaceholderView title="Notifications" icon={Bell} description="Configure automated alert rules, email templates, and escalation paths for unresolved discrepancies." />}
-        {activeView === 'settings' && <PlaceholderView title="Settings" icon={Settings} description="Configure reconciliation thresholds, regions, currency rules, and user access permissions." />}
-        {activeView === 'help' && <PlaceholderView title="Help Center" icon={HelpCircle} description="Documentation, SOPs, and contact information for the Aleph Finance Operations support team." />}
+        {activeView === 'recon' && <ReconciliationsView />}
+        {activeView === 'sources' && <DataSourcesView />}
+        {activeView === 'teams' && <CommercialTeamsView />}
+        {activeView === 'notifications' && <NotificationsView />}
+        {activeView === 'settings' && <SettingsView />}
+        {activeView === 'help' && <HelpView />}
 
         {activeView === 'dashboard' && <>
         {/* KPI Bento Grid */}
