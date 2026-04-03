@@ -44,6 +44,7 @@ jobs:
         run: |
           docker build \
             --build-arg VITE_API_URL=https://aleph-recon-api-4772ziyq2a-uc.a.run.app \
+            --build-arg VITE_API_KEY=${{ secrets.ALEPH_API_KEY }} \
             -t $FRONTEND_IMAGE:${{ github.sha }} \
             -t $FRONTEND_IMAGE:latest \
             .
@@ -105,6 +106,6 @@ jobs:
             --region $REGION \
             --project $PROJECT_ID \
             --allow-unauthenticated \
-            --set-secrets "GMAIL_USER=aleph-gmail-user:latest,GMAIL_APP_PASSWORD=aleph-gmail-app-password:latest" \
+            --set-secrets "GMAIL_USER=aleph-gmail-user:latest,GMAIL_APP_PASSWORD=aleph-gmail-app-password:latest,API_KEY=aleph-api-key:latest" \
             --set-env-vars "ALLOWED_ORIGINS=https://aleph-automation-4772ziyq2a-uc.a.run.app" \
             --quiet

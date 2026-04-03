@@ -4,6 +4,12 @@
  */
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://aleph-recon-api-4772ziyq2a-uc.a.run.app';
+const API_KEY = import.meta.env.VITE_API_KEY || '';
+
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  ...(API_KEY ? { 'Authorization': `Bearer ${API_KEY}` } : {}),
+});
 
 /**
  * Send a follow-up email to a manager for a specific IO discrepancy.
@@ -25,7 +31,7 @@ export async function sendFollowUpEmail(item, sentByEmail = 'admin@aleph.test') 
   try {
     const res = await fetch(`${API_BASE}/api/followup`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -70,7 +76,7 @@ export async function sendBulkFollowUpEmails(items, sentByEmail = 'admin@aleph.t
   try {
     const res = await fetch(`${API_BASE}/api/bulk-notify`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ items: errorItems, sentBy: sentByEmail }),
     });
 

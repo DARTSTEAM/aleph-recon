@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const { body, validationResult } = require('express-validator');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 8081;
@@ -27,6 +28,32 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '1mb' }));
+
+// ─── RATE LIMIT ───────────────────────────────────────────────────────────────
+app.use('/api', rateLimit({
+  windowMs: 60 * 1000,       // 1 minute
+  max: 20,                    // max 20 requests/min per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests — slow down.' },
+}));
+
+// ─── API KEY AUTH ─────────────────────────────────────────────────────────────
+const API_KEY = process.env.API_KEY;
+
+const requireApiKey = (req, res, next) => {
+  if (!API_KEY) {
+    // Dev mode: no key configured, allow all (log warning)
+    console.warn('[auth] API_KEY not set — running in open mode (dev only)');
+    return next();
+  }
+  const header = req.headers['authorization'] || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token || token !== API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized — invalid or missing API key.' });
+  }
+  next();
+};
 
 // ─── NODEMAILER TRANSPORTER ───────────────────────────────────────────────────
 const createTransporter = () => {
@@ -56,6 +83,7 @@ app.get('/api/health', (req, res) => {
 
 // ─── FOLLOW-UP EMAIL ─────────────────────────────────────────────────────────
 app.post('/api/followup',
+  requireApiKey,
   [
     body('io').notEmpty().withMessage('IO number is required'),
     body('account').notEmpty(),
@@ -157,6 +185,7 @@ Aleph Revenue Recognition Team
 
 // ─── BULK NOTIFY ──────────────────────────────────────────────────────────────
 app.post('/api/bulk-notify',
+  requireApiKey,
   [body('items').isArray({ min: 1 }).withMessage('items array is required')],
   async (req, res) => {
     const errors = validationResult(req);
