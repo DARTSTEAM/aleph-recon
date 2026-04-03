@@ -93,15 +93,32 @@ function LoginScreen({ onLogin, onDevLogin }) {
 }
 
 // --- Sidebar Item ---
-const SidebarItem = ({ icon: Icon, label, active = false }) => (
-  <div style={{
-    display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '8px',
-    cursor: 'pointer', transition: 'all 0.2s', color: active ? 'var(--primary)' : 'var(--text-secondary)',
-    backgroundColor: active ? 'rgba(0,55,255,0.06)' : 'transparent',
-    fontWeight: active ? '700' : '500', fontSize: '14px', marginBottom: '2px'
-  }}>
+const SidebarItem = ({ icon: Icon, label, active = false, onClick }) => (
+  <div
+    onClick={onClick}
+    style={{
+      display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '8px',
+      cursor: 'pointer', transition: 'all 0.2s', color: active ? 'var(--primary)' : 'var(--text-secondary)',
+      backgroundColor: active ? 'rgba(0,55,255,0.06)' : 'transparent',
+      fontWeight: active ? '700' : '500', fontSize: '14px', marginBottom: '2px',
+      userSelect: 'none'
+    }}
+  >
     <Icon size={17} /> {label}
   </div>
+);
+
+// --- Placeholder View ---
+const PlaceholderView = ({ title, icon: Icon, description }) => (
+  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', gap: '16px' }}>
+    <div style={{ padding: '20px', borderRadius: '16px', backgroundColor: '#F0F3FF', color: 'var(--primary)' }}>
+      <Icon size={32} />
+    </div>
+    <h2 style={{ fontWeight: '800', letterSpacing: '-0.03em' }}>{title}</h2>
+    <p style={{ color: 'var(--text-secondary)', maxWidth: '340px', lineHeight: '1.6' }}>{description}</p>
+    <div style={{ padding: '8px 16px', borderRadius: '8px', background: '#F0F3FF', color: 'var(--primary)', fontSize: '12px', fontWeight: '700' }}>Coming Soon</div>
+  </motion.div>
 );
 
 // --- Bento Stat Card ---
@@ -121,8 +138,9 @@ const BentoStat = ({ label, value, sub, icon: Icon }) => (
 // --- Main App ---
 function App() {
   const [firebaseUser, setFirebaseUser] = useState(null);
-  const [devUser, setDevUser] = useState(false); // test bypass
+  const [devUser, setDevUser] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const [activeView, setActiveView] = useState('dashboard');
   const [items, setItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -255,14 +273,14 @@ function App() {
 
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', paddingLeft: '14px' }}>Workspace</div>
-          <SidebarItem icon={LayoutDashboard} label="Dashboard" active />
-          <SidebarItem icon={Activity} label="Reconciliations" />
-          <SidebarItem icon={Database} label="Data Sources" />
-          <SidebarItem icon={Users} label="Commercial Teams" />
-          <SidebarItem icon={Bell} label="Notifications" />
+          <SidebarItem icon={LayoutDashboard} label="Dashboard"         active={activeView === 'dashboard'}         onClick={() => setActiveView('dashboard')} />
+          <SidebarItem icon={Activity}         label="Reconciliations"   active={activeView === 'recon'}            onClick={() => setActiveView('recon')} />
+          <SidebarItem icon={Database}         label="Data Sources"       active={activeView === 'sources'}          onClick={() => setActiveView('sources')} />
+          <SidebarItem icon={Users}            label="Commercial Teams"   active={activeView === 'teams'}            onClick={() => setActiveView('teams')} />
+          <SidebarItem icon={Bell}             label="Notifications"      active={activeView === 'notifications'}    onClick={() => setActiveView('notifications')} />
           <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '1.5rem 0' }} />
-          <SidebarItem icon={Settings} label="Settings" />
-          <SidebarItem icon={HelpCircle} label="Help" />
+          <SidebarItem icon={Settings}         label="Settings"           active={activeView === 'settings'}         onClick={() => setActiveView('settings')} />
+          <SidebarItem icon={HelpCircle}       label="Help"               active={activeView === 'help'}             onClick={() => setActiveView('help')} />
         </div>
 
         {/* User Badge */}
@@ -283,9 +301,9 @@ function App() {
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2.5rem' }}>
           <div>
             <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '4px' }}>
-              Dashboard &rsaquo; Twitter (X) Close {useFirestore && <span style={{ color: '#10B981', marginLeft: '8px' }}>● Live</span>}
+              Dashboard &rsaquo; {activeView.charAt(0).toUpperCase() + activeView.slice(1)} {useFirestore && <span style={{ color: '#10B981', marginLeft: '8px' }}>● Live</span>}
             </div>
-            <h1>Q1 2026 Reconciliation</h1>
+            <h1>{activeView === 'dashboard' ? 'Q1 2026 Reconciliation' : activeView.charAt(0).toUpperCase() + activeView.slice(1)}</h1>
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             {saving && <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}><RefreshCw size={14} className="animate-spin" /> Syncing...</span>}
@@ -299,6 +317,15 @@ function App() {
           </div>
         </header>
 
+        {/* View Router */}
+        {activeView === 'recon' && <PlaceholderView title="Reconciliations" icon={Activity} description="Full history of all reconciliation runs, monthly comparisons, and variance reports." />}
+        {activeView === 'sources' && <PlaceholderView title="Data Sources" icon={Database} description="Connect and manage your Salesforce exports, Twitter Billing files and Partner Statements here." />}
+        {activeView === 'teams' && <PlaceholderView title="Commercial Teams" icon={Users} description="Manage commercial team contacts, assign error ownership, and track follow-up accountability." />}
+        {activeView === 'notifications' && <PlaceholderView title="Notifications" icon={Bell} description="Configure automated alert rules, email templates, and escalation paths for unresolved discrepancies." />}
+        {activeView === 'settings' && <PlaceholderView title="Settings" icon={Settings} description="Configure reconciliation thresholds, regions, currency rules, and user access permissions." />}
+        {activeView === 'help' && <PlaceholderView title="Help Center" icon={HelpCircle} description="Documentation, SOPs, and contact information for the Aleph Finance Operations support team." />}
+
+        {activeView === 'dashboard' && <>
         {/* KPI Bento Grid */}
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem', marginBottom: '2.5rem' }}>
           <BentoStat label="Settled Volume" value={`$${(totalVolume / 1000).toFixed(0)}K`} sub="Twitter (X) spend" icon={CreditCard} />
@@ -411,6 +438,7 @@ function App() {
             </tbody>
           </table>
         </div>
+        </> }
       </main>
     </div>
   );
