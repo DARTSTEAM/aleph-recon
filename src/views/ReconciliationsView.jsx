@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Clock, ChevronDown, ChevronRight, Download, Calendar, X, AlertCircle, ArrowRight } from 'lucide-react';
+import { useT } from '../i18n/index.jsx';
 
 const MOCK_RUNS = [
   { id: 'run-mar-2026', label: 'March 2026', date: '2026-03-31', total: 312, matched: 298, errors: 14, fixing: 0, matchRate: 95.5, volume: 2840000 },
@@ -26,6 +27,7 @@ const MOCK_DETAILS = {
 
 // ─── IO Preview Modal ─────────────────────────────────────────────────────────
 const IOPreview = ({ item, onClose }) => {
+  const { t } = useT();
   if (!item) return null;
   const hasDiff = item.diff !== 0;
   return (
@@ -49,18 +51,18 @@ const IOPreview = ({ item, onClose }) => {
         {/* Diff view — SF vs Twitter */}
         <div style={{ padding: '1.5rem' }}>
           <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>
-            Side-by-side comparison
+            {t('preview.comparison')}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '1rem', alignItems: 'start' }}>
             {/* Salesforce */}
             <div style={{ background: '#EFF6FF', borderRadius: '12px', padding: '1.25rem' }}>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: '#1D4ED8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Salesforce</div>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: '#1D4ED8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>{t('preview.salesforce')}</div>
               {[
-                { label: 'IO Number', value: item.io },
-                { label: 'Account', value: item.account },
-                { label: 'Manager', value: item.manager },
-                { label: 'Net Budget', value: `$${item.sfBudget?.toLocaleString()}`, highlight: hasDiff, color: '#1D4ED8' },
-                { label: 'Category', value: item.category },
+                { label: t('preview.ioNumber'), value: item.io },
+                { label: t('preview.account'), value: item.account },
+                { label: t('preview.manager'), value: item.manager },
+                { label: t('preview.netBudget'), value: `$${item.sfBudget?.toLocaleString()}`, highlight: hasDiff, color: '#1D4ED8' },
+                { label: t('preview.category'), value: item.category },
               ].map(({ label, value, highlight, color }) => (
                 <div key={label} style={{ marginBottom: '10px' }}>
                   <div style={{ fontSize: '10px', color: '#60A5FA', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>{label}</div>
@@ -76,13 +78,13 @@ const IOPreview = ({ item, onClose }) => {
 
             {/* Twitter */}
             <div style={{ background: hasDiff ? '#FEF2F2' : '#F0FDF4', borderRadius: '12px', padding: '1.25rem' }}>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: hasDiff ? '#DC2626' : '#16A34A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Twitter Billing</div>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: hasDiff ? '#DC2626' : '#16A34A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>{t('preview.twitter')}</div>
               {[
-                { label: 'IO Number', value: item.io },
-                { label: 'Account', value: item.account },
-                { label: 'Manager', value: item.manager },
-                { label: 'Billed Amount', value: `$${item.twBilling?.toLocaleString()}`, highlight: hasDiff, color: hasDiff ? '#DC2626' : '#16A34A' },
-                { label: 'Category', value: item.category },
+                { label: t('preview.ioNumber'), value: item.io },
+                { label: t('preview.account'), value: item.account },
+                { label: t('preview.manager'), value: item.manager },
+                { label: t('preview.billedAmount'), value: `$${item.twBilling?.toLocaleString()}`, highlight: hasDiff, color: hasDiff ? '#DC2626' : '#16A34A' },
+                { label: t('preview.category'), value: item.category },
               ].map(({ label, value, highlight, color }) => (
                 <div key={label} style={{ marginBottom: '10px' }}>
                   <div style={{ fontSize: '10px', color: hasDiff ? '#FCA5A5' : '#86EFAC', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>{label}</div>
@@ -97,7 +99,7 @@ const IOPreview = ({ item, onClose }) => {
             <div style={{ marginTop: '1.25rem', padding: '1rem', background: '#FEF2F2', borderRadius: '10px', border: '1px solid #FECACA' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontWeight: '700', color: '#991B1B', fontSize: '13px' }}>Discrepancy detected</div>
+                  <div style={{ fontWeight: '700', color: '#991B1B', fontSize: '13px' }}>{t('preview.discrepancyDetected')}</div>
                   {item.comment && <div style={{ fontSize: '12px', color: '#DC2626', marginTop: '4px' }}>{item.comment}</div>}
                 </div>
                 <div style={{ fontWeight: '800', fontSize: '20px', color: '#DC2626' }}>-${Math.abs(item.diff).toLocaleString()}</div>
@@ -106,7 +108,7 @@ const IOPreview = ({ item, onClose }) => {
           ) : (
             <div style={{ marginTop: '1.25rem', padding: '1rem', background: '#F0FDF4', borderRadius: '10px', border: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <CheckCircle2 size={18} style={{ color: '#16A34A' }} />
-              <span style={{ fontWeight: '700', color: '#15803D' }}>Fully matched — no discrepancy</span>
+              <span style={{ fontWeight: '700', color: '#15803D' }}>{t('preview.fullyMatched')}</span>
             </div>
           )}
 
@@ -122,6 +124,7 @@ const IOPreview = ({ item, onClose }) => {
 };
 
 export default function ReconciliationsView() {
+  const { t } = useT();
   const [expanded, setExpanded] = useState(null);
   const [previewIO, setPreviewIO] = useState(null);
 
@@ -136,13 +139,13 @@ export default function ReconciliationsView() {
       <div className="bento-card" style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: '700' }}>Match Rate Trend</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Last 5 billing periods</div>
+            <div style={{ fontSize: '13px', fontWeight: '700' }}>{t('recon.trendTitle')}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{t('recon.trendSub')}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '28px', fontWeight: '800', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>{MOCK_RUNS[0].matchRate}%</div>
             <div style={{ fontSize: '11px', color: MOCK_RUNS[0].matchRate > MOCK_RUNS[1].matchRate ? '#EF4444' : '#10B981', fontWeight: '600' }}>
-              {MOCK_RUNS[0].matchRate > MOCK_RUNS[1].matchRate ? '▲' : '▼'} vs prev. period
+              {MOCK_RUNS[0].matchRate > MOCK_RUNS[1].matchRate ? '▲' : '▼'} {t('recon.vsPrevPeriod')}
             </div>
           </div>
         </div>
@@ -186,10 +189,10 @@ export default function ReconciliationsView() {
         })()}
         <div style={{ display: 'flex', gap: '0', borderTop: '1px solid var(--border-subtle)', marginTop: '0.5rem', paddingTop: '1rem' }}>
           {[
-            { label: 'Best Period', value: 'Dec 2025', sub: '100%', color: '#10B981' },
-            { label: 'Avg Match Rate', value: '97.2%', sub: 'Last 5 months', color: 'var(--primary)' },
-            { label: 'Total Errors', value: '33', sub: 'Cumulative', color: '#EF4444' },
-            { label: 'Total Volume', value: '$13.6M', sub: 'Billed (X)', color: 'var(--text-primary)' },
+            { label: t('recon.bestPeriod'), value: 'Dec 2025', sub: '100%', color: '#10B981' },
+            { label: t('recon.avgMatchRate'), value: '97.2%', sub: 'Last 5 months', color: 'var(--primary)' },
+            { label: t('recon.totalErrors'), value: '33', sub: 'Cumulative', color: '#EF4444' },
+            { label: t('recon.totalVolume'), value: '$13.6M', sub: 'Billed (X)', color: 'var(--text-primary)' },
           ].map(({ label, value, sub, color }, i, arr) => (
             <div key={label} style={{ flex: 1, textAlign: 'center', borderRight: i < arr.length - 1 ? '1px solid var(--border-subtle)' : 'none', padding: '0 1rem' }}>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>{label}</div>
@@ -204,23 +207,23 @@ export default function ReconciliationsView() {
       <div className="data-table-wrapper">
         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Calendar size={16} style={{ color: 'var(--primary)' }} /> Reconciliation Run History
+            <Calendar size={16} style={{ color: 'var(--primary)' }} /> {t('recon.runHistory')}
           </div>
           <button className="btn-premium btn-ghost" style={{ fontSize: '12px', padding: '7px 14px' }}>
-            <Download size={13} /> Export All
+            <Download size={13} /> {t('action.exportAll')}
           </button>
         </div>
         <table className="data-table">
           <thead>
             <tr>
               <th></th>
-              <th>Period</th>
-              <th>Total IOs</th>
-              <th>Matched</th>
-              <th>Errors</th>
-              <th>In Progress</th>
-              <th>Match Rate</th>
-              <th>Volume</th>
+              <th>{t('table.period')}</th>
+              <th>{t('table.totalIOs')}</th>
+              <th>{t('table.matched')}</th>
+              <th>{t('table.errors')}</th>
+              <th>{t('table.inProgress')}</th>
+              <th>{t('table.matchRate')}</th>
+              <th>{t('table.volume')}</th>
             </tr>
           </thead>
           <tbody>
@@ -251,7 +254,7 @@ export default function ReconciliationsView() {
                       <td colSpan={8} style={{ padding: 0, backgroundColor: '#FAFAFD' }}>
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                           style={{ padding: '1rem 2.5rem', borderTop: '1px solid var(--border-subtle)' }}>
-                          <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>IOs in this run — click to see detail</div>
+                          <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{t('recon.iosInRun')}</div>
                           {MOCK_DETAILS[run.id].map((d) => (
                             <div key={d.io}
                               onClick={() => setPreviewIO(d)}
@@ -267,7 +270,7 @@ export default function ReconciliationsView() {
                                 {d.status}
                               </span>
                               {d.diff !== 0 && <span style={{ color: '#EF4444', fontWeight: '700', width: '80px', textAlign: 'right' }}>-${Math.abs(d.diff).toLocaleString()}</span>}
-                              <span style={{ color: 'var(--primary)', fontSize: '11px', fontWeight: '600' }}>View →</span>
+                              <span style={{ color: 'var(--primary)', fontSize: '11px', fontWeight: '600' }}>{t('recon.viewIO')}</span>
                             </div>
                           ))}
                         </motion.div>

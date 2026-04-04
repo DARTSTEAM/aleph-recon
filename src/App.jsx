@@ -17,6 +17,7 @@ import NotificationsView from './views/NotificationsView';
 import SettingsView from './views/SettingsView';
 import HelpView from './views/HelpView';
 import { sendFollowUpEmail, sendBulkFollowUpEmails, checkApiHealth } from './utils/apiService';
+import { useT } from './i18n/index.jsx';
 
 const MOCK_RECON_ITEMS = [
   { id: '1', io: 'TW-50473210', account: "L'Oréal Argentina", manager: 'Mariana Tunno', sfBudget: 12500, twBilling: 12500, diff: 0, status: 'Matched', category: 'Budget' },
@@ -29,6 +30,7 @@ const MOCK_RECON_ITEMS = [
 
 // --- Login Screen ---
 function LoginScreen({ onLogin, onDevLogin }) {
+  const { t, toggleLang, lang } = useT();
   const [creds, setCreds] = useState({ user: '', pass: '' });
   const [error, setError] = useState('');
 
@@ -45,16 +47,22 @@ function LoginScreen({ onLogin, onDevLogin }) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-app)' }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-        style={{ background: 'white', borderRadius: '16px', padding: '3rem', textAlign: 'center', boxShadow: 'var(--shadow-lg)', maxWidth: '420px', width: '90%', border: '1px solid var(--border-subtle)' }}>
+        style={{ background: 'white', borderRadius: '16px', padding: '3rem', textAlign: 'center', boxShadow: 'var(--shadow-lg)', maxWidth: '420px', width: '90%', border: '1px solid var(--border-subtle)', position: 'relative' }}>
+
+        {/* Language toggle in login */}
+        <button onClick={toggleLang} style={{ position: 'absolute', top: '16px', right: '16px', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'transparent', cursor: 'pointer', fontSize: '12px', fontWeight: '700', fontFamily: 'var(--font-brand)', color: 'var(--text-secondary)' }}>
+          🌐 {t('lang.toggle')}
+        </button>
+
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '2rem' }}>
           <div style={{ width: '36px', height: '36px', background: 'var(--primary)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
             <Layers size={20} />
           </div>
           <img src="https://lever-client-logos.s3.us-west-2.amazonaws.com/939c1eda-6bdd-4f5f-b213-5316b3e62e2c-1695365909215.png" style={{ height: '24px' }} alt="Aleph" />
         </div>
-        <h2 style={{ fontWeight: '800', fontSize: '1.5rem', letterSpacing: '-0.03em', marginBottom: '8px' }}>Recon Studio</h2>
+        <h2 style={{ fontWeight: '800', fontSize: '1.5rem', letterSpacing: '-0.03em', marginBottom: '8px' }}>{t('auth.title')}</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '2rem', lineHeight: '1.6' }}>
-          Twitter (X) Reconciliation &amp; Follow-up<br />Management Platform
+          {t('auth.subtitle')}
         </p>
 
         {/* Google Sign In */}
@@ -65,13 +73,13 @@ function LoginScreen({ onLogin, onDevLogin }) {
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
           </svg>
-          Sign in with Google
+          {t('auth.loginGoogle')}
         </button>
 
         {/* Divider */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.5rem' }}>
           <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>OR TEST ACCESS</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>{lang === 'es' ? 'O ACCESO DE PRUEBA' : 'OR TEST ACCESS'}</span>
           <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
         </div>
 
@@ -89,11 +97,13 @@ function LoginScreen({ onLogin, onDevLogin }) {
           />
           {error && <p style={{ color: '#EF4444', fontSize: '12px', marginBottom: '8px' }}>{error}</p>}
           <button type="submit" className="btn-premium btn-ghost" style={{ width: '100%', justifyContent: 'center', padding: '10px' }}>
-            Enter as Test User
+            {t('auth.loginAdmin')}
           </button>
         </form>
 
-        <p style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '1.5rem' }}>Production access restricted to Aleph Finance Operations</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '1.5rem' }}>
+          {lang === 'es' ? 'Acceso de producción restringido a Aleph Finance Operations' : 'Production access restricted to Aleph Finance Operations'}
+        </p>
       </motion.div>
     </div>
   );
@@ -131,6 +141,7 @@ const BentoStat = ({ label, value, sub, icon: Icon }) => (
 
 // --- Main App ---
 function App() {
+  const { t, lang, toggleLang } = useT();
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [devUser, setDevUser] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
@@ -291,17 +302,25 @@ function App() {
         </div>
 
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', paddingLeft: '14px' }}>Workspace</div>
-          <SidebarItem icon={LayoutDashboard} label="Dashboard"         active={activeView === 'dashboard'}         onClick={() => setActiveView('dashboard')} />
-          <SidebarItem icon={Activity}         label="Reconciliations"   active={activeView === 'recon'}            onClick={() => setActiveView('recon')} />
-          <SidebarItem icon={Database}         label="Data Sources"       active={activeView === 'sources'}          onClick={() => setActiveView('sources')} />
-          <SidebarItem icon={Users}            label="Commercial Teams"   active={activeView === 'teams'}            onClick={() => setActiveView('teams')} />
-          <SidebarItem icon={Bell}             label="Notifications"      active={activeView === 'notifications'}    onClick={() => setActiveView('notifications')} />
+        <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', paddingLeft: '14px' }}>{t('nav.workspace')}</div>
+          <SidebarItem icon={LayoutDashboard} label={t('nav.dashboard')}         active={activeView === 'dashboard'}         onClick={() => setActiveView('dashboard')} />
+          <SidebarItem icon={Activity}         label={t('nav.reconciliations')}   active={activeView === 'recon'}            onClick={() => setActiveView('recon')} />
+          <SidebarItem icon={Database}         label={t('nav.dataSources')}       active={activeView === 'sources'}          onClick={() => setActiveView('sources')} />
+          <SidebarItem icon={Users}            label={t('nav.commercialTeams')}   active={activeView === 'teams'}            onClick={() => setActiveView('teams')} />
+          <SidebarItem icon={Bell}             label={t('nav.notifications')}      active={activeView === 'notifications'}    onClick={() => setActiveView('notifications')} />
           <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '1.5rem 0' }} />
-          <SidebarItem icon={Settings}         label="Settings"           active={activeView === 'settings'}         onClick={() => setActiveView('settings')} />
-          <SidebarItem icon={HelpCircle}       label="Help"               active={activeView === 'help'}             onClick={() => setActiveView('help')} />
+          <SidebarItem icon={Settings}         label={t('nav.settings')}           active={activeView === 'settings'}         onClick={() => setActiveView('settings')} />
+          <SidebarItem icon={HelpCircle}       label={t('nav.help')}               active={activeView === 'help'}             onClick={() => setActiveView('help')} />
         </div>
 
+        {/* Language Toggle + User Badge */}
+        <button
+          onClick={toggleLang}
+          style={{ marginBottom: '8px', width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontFamily: 'var(--font-brand)', color: 'var(--text-secondary)' }}
+        >
+          <span style={{ fontWeight: '600' }}>🌐 {t('lang.current')}</span>
+          <span style={{ padding: '2px 8px', borderRadius: '4px', background: 'var(--primary)', color: 'white', fontWeight: '700', fontSize: '11px' }}>{t('lang.toggle')}</span>
+        </button>
         {/* User Badge */}
         <div style={{ padding: '12px', borderRadius: '10px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '10px' }}>
           {user.photoURL && <img src={user.photoURL} style={{ width: '30px', height: '30px', borderRadius: '50%' }} alt="" />}
@@ -320,19 +339,21 @@ function App() {
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
             <h1>{
-              activeView === 'dashboard' ? 'Q1 2026 Reconciliation' :
-              activeView === 'recon' ? 'Reconciliations' :
-              activeView === 'sources' ? 'Data Sources' :
-              activeView === 'teams' ? 'Commercial Teams' :
-              activeView === 'notifications' ? 'Notifications' :
+              activeView === 'dashboard' ? t('header.title.dashboard') :
+              activeView === 'recon' ? t('header.title.recon') :
+              activeView === 'sources' ? t('header.title.sources') :
+              activeView === 'teams' ? t('header.title.teams') :
+              activeView === 'notifications' ? t('header.title.notifications') :
+              activeView === 'settings' ? t('header.title.settings') :
+              activeView === 'help' ? t('header.title.help') :
               activeView.charAt(0).toUpperCase() + activeView.slice(1)
             }</h1>
-            {useFirestore && <span style={{ fontSize: '11px', color: '#10B981', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>● Live</span>}
+            {useFirestore && <span style={{ fontSize: '11px', color: '#10B981', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>{t('header.live')}</span>}
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            {saving && <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}><RefreshCw size={14} className="animate-spin" /> Syncing...</span>}
+            {saving && <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}><RefreshCw size={14} className="animate-spin" /> {t('header.syncing')}</span>}
             <button className="btn-premium btn-solid" onClick={() => setActiveView('sources')}>
-              <DownloadCloud size={16} /> Import Dataset
+              <DownloadCloud size={16} /> {t('header.importDataset')}
             </button>
           </div>
         </header>
@@ -348,26 +369,26 @@ function App() {
         {activeView === 'dashboard' && <>
         {/* KPI Bento Grid */}
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem', marginBottom: '2.5rem' }}>
-          <BentoStat label="Settled Volume" value={`$${(totalVolume / 1000).toFixed(0)}K`} sub="Twitter (X) spend" icon={CreditCard} />
-          <BentoStat label="Unresolved Errors" value={errorCount} sub={`${fixingCount} in progress`} icon={AlertCircle} />
-          <BentoStat label="Follow-ups Sent" value={fixingCount} sub="Awaiting SF update" icon={Mail} />
-          <BentoStat label="Match Rate" value={`${items.length > 0 ? ((items.filter(i => i.status === 'Matched').length / items.length) * 100).toFixed(0) : 0}%`} sub="Target: 99%" icon={ShieldCheck} />
+          <BentoStat label={t('kpi.settledVolume')} value={`$${(totalVolume / 1000).toFixed(0)}K`} sub={t('kpi.settledVolume.sub')} icon={CreditCard} />
+          <BentoStat label={t('kpi.unresolvedErrors')} value={errorCount} sub={t('kpi.unresolvedErrors.sub', { n: fixingCount })} icon={AlertCircle} />
+          <BentoStat label={t('kpi.followUpsSent')} value={fixingCount} sub={t('kpi.followUpsSent.sub')} icon={Mail} />
+          <BentoStat label={t('kpi.matchRate')} value={`${items.length > 0 ? ((items.filter(i => i.status === 'Matched').length / items.length) * 100).toFixed(0) : 0}%`} sub={t('kpi.matchRate.sub')} icon={ShieldCheck} />
         </section>
 
         {/* File Upload Row */}
         <div className="bento-card" style={{ marginBottom: '2rem', padding: '1.25rem' }}>
           <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <DownloadCloud size={16} style={{ color: 'var(--primary)' }} /> Data Sources
+            <DownloadCloud size={16} style={{ color: 'var(--primary)' }} /> {t('nav.dataSources')}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            {[{ key: 'sf', label: 'Salesforce Export', color: '#1D4ED8' }, { key: 'tw', label: 'Twitter Billing File', color: '#6D28D9' }].map(({ key, label, color }) => (
+            {[{ key: 'sf', label: t('sources.sfExport'), color: '#1D4ED8' }, { key: 'tw', label: t('sources.twBilling'), color: '#6D28D9' }].map(({ key, label, color }) => (
               <label key={key} className="dropzone-inner" style={{ cursor: 'pointer', display: 'block' }}>
                 <input type="file" hidden accept=".xlsx,.csv" onChange={(e) => e.target.files[0] && handleFileUpload(key, e.target.files[0])} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <FileSpreadsheet size={16} style={{ color }} />
                   <div>
                     <div style={{ fontWeight: '600', fontSize: '13px', color }}>{label}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{files[key] ? `✓ ${files[key].name}` : 'Click to upload .xlsx'}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{files[key] ? `✓ ${files[key].name}` : t('sources.waiting')}</div>
                   </div>
                 </div>
               </label>
@@ -380,7 +401,7 @@ function App() {
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div className="search-container" style={{ width: '380px' }}>
               <Search size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input type="text" placeholder="Filter by IO, account or manager..." className="search-input-bespoke" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              <input type="text" placeholder={t('action.filterIO')} className="search-input-bespoke" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               {errorCount > 0 && (
@@ -388,17 +409,17 @@ function App() {
                   onClick={async () => {
                     if (!confirm(`Bulk send follow-up emails for all ${errorCount} open discrepancies?`)) return;
                     const activeUser = firebaseUser || { email: 'admin@aleph.test' };
-                    showToast(`Sending ${errorCount} emails...`, 'info');
+                    showToast(t('toast.sendingEmails', { n: errorCount }), 'info');
                     const result = await sendBulkFollowUpEmails(items, activeUser.email);
-                    if (result.success) showToast(`${result.sent} emails sent successfully ✓`);
-                    else showToast(`Bulk send failed: ${result.error}`, 'error');
+                    if (result.success) showToast(t('toast.bulkSent', { n: result.sent }));
+                    else showToast(t('toast.bulkFailed', { error: result.error }), 'error');
                   }}>
-                  <Mail size={13} /> Bulk Notify ({errorCount})
+                  <Mail size={13} /> {t('action.bulkNotify', { n: errorCount })}
                 </button>
               )}
               <button className="btn-premium btn-solid" style={{ padding: '8px 14px', fontSize: '12px' }}
                 onClick={() => {
-                  const headers = ['IO Number', 'Account', 'Manager', 'SF Budget', 'Twitter Billing', 'Discrepancy', 'Category', 'Status', 'Comment'];
+                  const headers = [t('table.io'), t('table.account'), t('table.manager'), t('table.sfBudget'), t('table.twCost'), t('table.discrepancy'), t('table.category'), t('table.status'), t('table.comment')];
                   const rows = items.map(i => [
                     i.io, i.account, i.manager,
                     i.sfBudget, i.twBilling, i.diff,
@@ -413,7 +434,7 @@ function App() {
                   a.click();
                   URL.revokeObjectURL(url);
                 }}>
-                <FileText size={13} /> Export Report
+                <FileText size={13} /> {t('action.exportReport')}
               </button>
             </div>
           </div>
@@ -421,14 +442,14 @@ function App() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Publisher POID</th>
-                <th>Account</th>
-                <th>SF Budget</th>
-                <th>Twitter Cost</th>
-                <th>Discrepancy</th>
-                <th>Status</th>
-                <th>Resolution Log</th>
-                <th style={{ textAlign: 'center' }}>Actions</th>
+                <th>{t('table.io')}</th>
+                <th>{t('table.account')}</th>
+                <th>{t('table.sfBudget')}</th>
+                <th>{t('table.twCost')}</th>
+                <th>{t('table.discrepancy')}</th>
+                <th>{t('table.status')}</th>
+                <th>{t('table.resolution')}</th>
+                <th style={{ textAlign: 'center' }}>{t('table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -454,18 +475,18 @@ function App() {
                       </span>
                     </td>
                     <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {item.comment || <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No discrepancies</span>}
+                      {item.comment || <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>{lang === 'es' ? 'Sin discrepancias' : 'No discrepancies'}</span>}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                         {item.status === 'Error' && (
                           <button className="btn-premium btn-solid" style={{ padding: '6px 12px', fontSize: '11px' }} onClick={() => handleFollowUp(item)}>
-                            <Mail size={12} /> Follow-up
+                            <Mail size={12} /> {t('action.followUp')}
                           </button>
                         )}
                         {item.status === 'Fixing' && (
                           <button className="btn-premium" style={{ padding: '6px 12px', fontSize: '11px', background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0' }} onClick={() => handleResolve(item)}>
-                            <CheckCircle2 size={12} /> Mark Resolved
+                            <CheckCircle2 size={12} /> {t('action.resolve')}
                           </button>
                         )}
                         <button className="btn-premium btn-ghost" style={{ padding: '6px' }}><ExternalLink size={13} /></button>

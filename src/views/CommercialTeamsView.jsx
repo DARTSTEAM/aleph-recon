@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, ChevronDown, ChevronRight, AlertCircle, Clock, CheckCircle2, X, ArrowRight, Eye } from 'lucide-react';
+import { useT } from '../i18n/index.jsx';
 
 const MANAGERS = [
   {
@@ -33,8 +34,8 @@ const MANAGERS = [
   },
 ];
 
-// ─── IO Preview Modal ─────────────────────────────────────────────────────────
 const IOPreview = ({ item, onClose }) => {
+  const { t } = useT();
   if (!item) return null;
   const hasDiff = item.diff !== 0;
   return (
@@ -52,24 +53,24 @@ const IOPreview = ({ item, onClose }) => {
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}><X size={20} /></button>
         </div>
         <div style={{ padding: '1.5rem' }}>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Side-by-side comparison</div>
+          <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>{t('preview.comparison')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '1rem', alignItems: 'start' }}>
             <div style={{ background: '#EFF6FF', borderRadius: '12px', padding: '1.25rem' }}>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: '#1D4ED8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Salesforce</div>
-              {[['IO Number', item.io], ['Account', item.account], ['Net Budget', `$${item.sfBudget?.toLocaleString()}`], ['Category', item.category]].map(([label, value]) => (
+              <div style={{ fontSize: '11px', fontWeight: '700', color: '#1D4ED8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>{t('preview.salesforce')}</div>
+              {[[t('preview.ioNumber'), item.io], [t('preview.account'), item.account], [t('preview.netBudget'), `$${item.sfBudget?.toLocaleString()}`], [t('preview.category'), item.category]].map(([label, value]) => (
                 <div key={label} style={{ marginBottom: '10px' }}>
                   <div style={{ fontSize: '10px', color: '#60A5FA', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>{label}</div>
-                  <div style={{ fontSize: '14px', fontWeight: label === 'Net Budget' && hasDiff ? '800' : '500', color: label === 'Net Budget' && hasDiff ? '#1D4ED8' : 'var(--text-primary)' }}>{value}</div>
+                  <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>{value}</div>
                 </div>
               ))}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', paddingTop: '3rem' }}><ArrowRight size={18} style={{ color: 'var(--text-muted)' }} /></div>
             <div style={{ background: hasDiff ? '#FEF2F2' : '#F0FDF4', borderRadius: '12px', padding: '1.25rem' }}>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: hasDiff ? '#DC2626' : '#16A34A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Twitter Billing</div>
-              {[['IO Number', item.io], ['Account', item.account], ['Billed Amount', `$${item.twBilling?.toLocaleString()}`], ['Category', item.category]].map(([label, value]) => (
+              <div style={{ fontSize: '11px', fontWeight: '700', color: hasDiff ? '#DC2626' : '#16A34A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>{t('preview.twitter')}</div>
+              {[[t('preview.ioNumber'), item.io], [t('preview.account'), item.account], [t('preview.billedAmount'), `$${item.twBilling?.toLocaleString()}`], [t('preview.category'), item.category]].map(([label, value]) => (
                 <div key={label} style={{ marginBottom: '10px' }}>
                   <div style={{ fontSize: '10px', color: hasDiff ? '#FCA5A5' : '#86EFAC', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>{label}</div>
-                  <div style={{ fontSize: '14px', fontWeight: label === 'Billed Amount' && hasDiff ? '800' : '500', color: label === 'Billed Amount' && hasDiff ? '#DC2626' : 'var(--text-primary)' }}>{value}</div>
+                  <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>{value}</div>
                 </div>
               ))}
             </div>
@@ -77,7 +78,7 @@ const IOPreview = ({ item, onClose }) => {
           {hasDiff ? (
             <div style={{ marginTop: '1.25rem', padding: '1rem', background: '#FEF2F2', borderRadius: '10px', border: '1px solid #FECACA', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontWeight: '700', color: '#991B1B', fontSize: '13px' }}>Discrepancy detected</div>
+                <div style={{ fontWeight: '700', color: '#991B1B', fontSize: '13px' }}>{t('preview.discrepancyDetected')}</div>
                 {item.comment && <div style={{ fontSize: '12px', color: '#DC2626', marginTop: '4px' }}>{item.comment}</div>}
               </div>
               <div style={{ fontWeight: '800', fontSize: '20px', color: '#DC2626' }}>-${Math.abs(item.diff).toLocaleString()}</div>
@@ -85,7 +86,7 @@ const IOPreview = ({ item, onClose }) => {
           ) : (
             <div style={{ marginTop: '1.25rem', padding: '1rem', background: '#F0FDF4', borderRadius: '10px', border: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <CheckCircle2 size={18} style={{ color: '#16A34A' }} />
-              <span style={{ fontWeight: '700', color: '#15803D' }}>Fully matched — no discrepancy</span>
+              <span style={{ fontWeight: '700', color: '#15803D' }}>{t('preview.fullyMatched')}</span>
             </div>
           )}
         </div>
@@ -95,6 +96,7 @@ const IOPreview = ({ item, onClose }) => {
 };
 
 export default function CommercialTeamsView() {
+  const { t } = useT();
   const [expanded, setExpanded] = useState(null);
   const [showClean, setShowClean] = useState(false);
   const [previewIO, setPreviewIO] = useState(null);
@@ -109,23 +111,20 @@ export default function CommercialTeamsView() {
         {previewIO && <IOPreview item={previewIO} onClose={() => setPreviewIO(null)} />}
       </AnimatePresence>
 
-      {/* Portfolio table */}
       <div className="data-table-wrapper">
         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontWeight: '700', fontSize: '14px' }}>Manager Portfolio Detail</div>
-          <div style={{ display: 'flex', align: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              {clean.length} manager{clean.length !== 1 ? 's' : ''} clean (hidden)
-            </span>
+          <div style={{ fontWeight: '700', fontSize: '14px' }}>{t('teams.portfolioTitle')}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('teams.nCleanHidden', { n: clean.length })}</span>
             <button className="btn-premium btn-ghost" style={{ fontSize: '12px', padding: '6px 12px' }} onClick={() => setShowClean(s => !s)}>
-              {showClean ? 'Hide clean' : 'Show all'}
+              {showClean ? t('action.hideClean') : t('action.showAll')}
             </button>
           </div>
         </div>
         <table className="data-table">
           <thead>
             <tr>
-              <th></th><th>Manager</th><th>Region</th><th>Total IOs</th><th>Health</th><th>Actions</th>
+              <th></th><th>{t('table.manager')}</th><th>{t('table.region')}</th><th>{t('table.totalIOs')}</th><th>{t('table.health')}</th><th>{t('table.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -150,17 +149,17 @@ export default function CommercialTeamsView() {
                   <td>{m.totalIOs}</td>
                   <td>
                     {m.errors === 0 && m.fixing === 0 ? (
-                      <span className="status-pill status-matched"><CheckCircle2 size={11} /> Clean</span>
+                      <span className="status-pill status-matched"><CheckCircle2 size={11} /> {t('status.clean')}</span>
                     ) : (
                       <span style={{ color: '#EF4444', fontWeight: '700', fontSize: '13px' }}>
                         <AlertCircle size={13} style={{ display: 'inline', marginRight: '4px' }} />
-                        {m.errors} open{m.fixing > 0 ? `, ${m.fixing} fixing` : ''}
+                        {m.fixing > 0 ? t('teams.nOpenFixing', { n: m.errors, f: m.fixing }) : t('teams.nOpen', { n: m.errors })}
                       </span>
                     )}
                   </td>
                   <td>
                     <a href={`mailto:${m.email}`} onClick={e => e.stopPropagation()} className="btn-premium btn-ghost" style={{ fontSize: '12px', padding: '6px 12px' }}>
-                      <Mail size={13} /> Contact
+                      <Mail size={13} /> {t('action.contact')}
                     </a>
                   </td>
                 </motion.tr>
@@ -170,7 +169,7 @@ export default function CommercialTeamsView() {
                       <td colSpan={6} style={{ padding: 0, backgroundColor: '#FAFAFD' }}>
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                           style={{ padding: '1rem 2.5rem', borderTop: '1px solid var(--border-subtle)' }}>
-                          <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Portfolio IOs — click to see detail</div>
+                          <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{t('teams.portfolioIOs')}</div>
                           {m.portfolio.map(io => (
                             <div key={io.io}
                               onClick={() => setPreviewIO(io)}
@@ -184,7 +183,7 @@ export default function CommercialTeamsView() {
                                 {io.status}
                               </span>
                               {io.diff !== 0 && <span style={{ color: '#EF4444', fontWeight: '700', width: '80px', textAlign: 'right' }}>-${Math.abs(io.diff).toLocaleString()}</span>}
-                              <span style={{ color: 'var(--primary)', fontSize: '11px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}><Eye size={12} /> View</span>
+                              <span style={{ color: 'var(--primary)', fontSize: '11px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}><Eye size={12} /> {t('recon.viewIO')}</span>
                             </div>
                           ))}
                         </motion.div>

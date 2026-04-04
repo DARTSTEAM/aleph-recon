@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bell, Mail, CheckCircle2, Send } from 'lucide-react';
+import { useT } from '../i18n/index.jsx';
 
 const LS_KEY_NOTIF = 'aleph-recon-notifications';
 
@@ -26,14 +27,6 @@ Please review and update Salesforce at your earliest convenience.
 Regards,
 Aleph Finance Operations Team`;
 
-const NOTIFICATION_LOG = [
-  { id: 1, type: 'Follow-up', to: 'Silvia Rodriguez', io: 'TW-10573655', sentAt: '2026-03-31 15:42', status: 'Delivered' },
-  { id: 2, type: 'Follow-up', to: 'Bautista B.', io: 'TW-10573662', sentAt: '2026-03-31 15:41', status: 'Delivered' },
-  { id: 3, type: 'Escalation', to: 'Finance Director', io: 'N/A - 14 open errors', sentAt: '2026-03-30 09:00', status: 'Delivered' },
-  { id: 4, type: 'Follow-up', to: 'Mariana Tunno', io: 'TW-10590112', sentAt: '2026-03-29 17:10', status: 'Delivered' },
-  { id: 5, type: 'Reminder', to: 'Silvia Rodriguez', io: 'TW-10573729', sentAt: '2026-03-28 09:00', status: 'Delivered' },
-];
-
 const Toggle = ({ label, description, value, onChange }) => (
   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
     <div>
@@ -55,6 +48,7 @@ const Toggle = ({ label, description, value, onChange }) => (
 );
 
 export default function NotificationsView() {
+  const { t } = useT();
   const saved = (() => { try { return JSON.parse(localStorage.getItem(LS_KEY_NOTIF)) || {}; } catch { return {}; } })();
   const [rules, setRules] = useState({ ...DEFAULT_RULES, ...saved.rules });
   const [template, setTemplate] = useState(saved.template || DEFAULT_TEMPLATE);
@@ -74,25 +68,25 @@ export default function NotificationsView() {
         {/* Alert Rules */}
         <div className="bento-card">
           <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Bell size={15} style={{ color: 'var(--primary)' }} /> Alert Rules
+            <Bell size={15} style={{ color: 'var(--primary)' }} /> {t('notif.alertRules')}
           </div>
-          <Toggle label="New Discrepancy Alert" description="Notify manager when a new error is detected" value={rules.newDiscrepancy} onChange={() => toggleRule('newDiscrepancy')} />
-          <Toggle label="Weekly Summary" description="Send weekly digest every Monday 9am" value={rules.weeklySummary} onChange={() => toggleRule('weeklySummary')} />
-          <Toggle label="Escalation (7 days)" description="Escalate to Finance Director after 7 days open" value={rules.escalation7d} onChange={() => toggleRule('escalation7d')} />
-          <Toggle label="Auto-Reminder" description="Re-notify manager every 3 days while status is Error" value={rules.autoReminder} onChange={() => toggleRule('autoReminder')} />
-          <Toggle label="Resolution Confirmation" description="Notify when an item is marked Resolved" value={rules.resolveConfirm} onChange={() => toggleRule('resolveConfirm')} />
+          <Toggle label={t('notif.toggle.newDiscrepancy')} description={t('notif.toggle.newDiscrepancy.desc')} value={rules.newDiscrepancy} onChange={() => toggleRule('newDiscrepancy')} />
+          <Toggle label={t('notif.toggle.weeklySummary')} description={t('notif.toggle.weeklySummary.desc')} value={rules.weeklySummary} onChange={() => toggleRule('weeklySummary')} />
+          <Toggle label={t('notif.toggle.escalation')} description={t('notif.toggle.escalation.desc')} value={rules.escalation7d} onChange={() => toggleRule('escalation7d')} />
+          <Toggle label={t('notif.toggle.autoReminder')} description={t('notif.toggle.autoReminder.desc')} value={rules.autoReminder} onChange={() => toggleRule('autoReminder')} />
+          <Toggle label={t('notif.toggle.resolveConfirm')} description={t('notif.toggle.resolveConfirm.desc')} value={rules.resolveConfirm} onChange={() => toggleRule('resolveConfirm')} />
           <button className="btn-premium btn-solid" style={{ marginTop: '1rem', fontSize: '12px', padding: '8px 16px' }} onClick={saveAll}>
-            {templateSaved ? <><CheckCircle2 size={13} /> Saved!</> : <><Send size={13} /> Save Rules</>}
+            {templateSaved ? <><CheckCircle2 size={13} /> {t('action.saved')}</> : <><Send size={13} /> {t('action.saveRules')}</>}
           </button>
         </div>
 
         {/* Email Template */}
         <div className="bento-card">
           <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Mail size={15} style={{ color: 'var(--primary)' }} /> Follow-up Email Template
+            <Mail size={15} style={{ color: 'var(--primary)' }} /> {t('notif.templateTitle')}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: '600' }}>
-            Variables: {`{manager} {io_number} {account} {sf_budget} {tw_billing} {diff}`}
+            {t('notif.templateVars')}
           </div>
           <textarea
             value={template}
@@ -104,7 +98,7 @@ export default function NotificationsView() {
             }}
           />
           <button className="btn-premium btn-solid" style={{ marginTop: '12px', fontSize: '12px', padding: '8px 16px' }} onClick={saveAll}>
-            {templateSaved ? <><CheckCircle2 size={13} /> Saved!</> : <><Send size={13} /> Save Template</>}
+            {templateSaved ? <><CheckCircle2 size={13} /> {t('action.saved')}</> : <><Send size={13} /> {t('action.saveTemplate')}</>}
           </button>
         </div>
       </div>

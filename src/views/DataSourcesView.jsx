@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, CheckCircle2, AlertCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useT } from '../i18n/index.jsx';
 
 const UPLOAD_HISTORY = [
   { id: 1, type: 'Salesforce', filename: 'SF_Export_Mar26_v3.xlsx', records: 312, uploadedAt: '2026-03-31 14:22', status: 'Processed' },
@@ -21,10 +22,10 @@ function detectFileType(filename = '') {
 }
 
 export default function DataSourcesView() {
+  const { t } = useT();
   const [sfFile, setSfFile] = useState(null);
   const [twFile, setTwFile] = useState(null);
   const [unknownFile, setUnknownFile] = useState(null);
-  const [detectedType, setDetectedType] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [processed, setProcessed] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -53,7 +54,6 @@ export default function DataSourcesView() {
       else if (type === 'Twitter Billing') setTwFile(file);
       else {
         setUnknownFile(file);
-        setDetectedType(null);
       }
     });
   };
@@ -62,7 +62,6 @@ export default function DataSourcesView() {
     if (type === 'Salesforce') setSfFile(unknownFile);
     else setSfFile(null), setTwFile(unknownFile);
     setUnknownFile(null);
-    setDetectedType(null);
   };
 
   const handleProcess = () => {
@@ -83,9 +82,9 @@ export default function DataSourcesView() {
 
       {/* ── Upload Zone ── */}
       <div className="bento-card" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.25rem' }}>Upload Files</div>
+        <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.25rem' }}>{t('sources.uploadTitle')}</div>
         <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-          Drop any file — we'll auto-detect whether it's a Salesforce export or a Twitter billing file based on the filename and headers.
+          {t('sources.uploadSub')}
         </div>
 
         {/* Drop zone */}
@@ -102,9 +101,9 @@ export default function DataSourcesView() {
           <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" multiple style={{ display: 'none' }} onChange={handleFileInput} />
           <Upload size={28} style={{ color: dragging ? 'var(--primary)' : 'var(--text-muted)', marginBottom: '8px' }} />
           <div style={{ fontWeight: '600', fontSize: '14px', color: dragging ? 'var(--primary)' : 'var(--text-primary)' }}>
-            Drop Salesforce and/or Twitter files here
+            {t('sources.dropZoneTitle')}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>or click to browse — .xlsx, .xls, .csv · both files at once supported</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{t('sources.dropZoneSub')}</div>
         </div>
 
         {/* Unknown file — ask user to classify */}
@@ -113,12 +112,12 @@ export default function DataSourcesView() {
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
               style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '1rem', marginBottom: '1rem' }}>
               <div style={{ fontWeight: '700', fontSize: '13px', color: '#92400E', marginBottom: '8px' }}>
-                ⚠ Can't auto-detect: <em>{unknownFile.name}</em>
+                ⚠ {t('sources.cannotDetect')} <em>{unknownFile.name}</em>
               </div>
-              <div style={{ fontSize: '12px', color: '#78350F', marginBottom: '10px' }}>What type of file is this?</div>
+              <div style={{ fontSize: '12px', color: '#78350F', marginBottom: '10px' }}>{t('sources.whatType')}</div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn-premium btn-ghost" style={{ fontSize: '12px' }} onClick={() => handleClassify('Salesforce')}>📊 Salesforce Export</button>
-                <button className="btn-premium btn-ghost" style={{ fontSize: '12px' }} onClick={() => handleClassify('Twitter')}>🐦 Twitter Billing</button>
+                <button className="btn-premium btn-ghost" style={{ fontSize: '12px' }} onClick={() => handleClassify('Salesforce')}>{t('sources.isSF')}</button>
+                <button className="btn-premium btn-ghost" style={{ fontSize: '12px' }} onClick={() => handleClassify('Twitter')}>{t('sources.isTW')}</button>
               </div>
             </motion.div>
           )}
@@ -127,8 +126,8 @@ export default function DataSourcesView() {
         {/* Detected files */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
           {[
-            { label: 'Salesforce Export', file: sfFile, color: '#1D4ED8', bg: '#EFF6FF' },
-            { label: 'Twitter (X) Billing', file: twFile, color: '#7C3AED', bg: '#F5F3FF' },
+            { label: t('sources.sfExport'), file: sfFile, color: '#1D4ED8', bg: '#EFF6FF' },
+            { label: t('sources.twBilling'), file: twFile, color: '#7C3AED', bg: '#F5F3FF' },
           ].map(({ label, file, color, bg }) => (
             <div key={label} style={{ padding: '1rem', borderRadius: '10px', background: file ? bg : '#F8F9FF', border: `1px solid ${file ? color + '33' : 'var(--border-subtle)'}` }}>
               <div style={{ fontSize: '11px', fontWeight: '700', color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>{label}</div>
@@ -138,7 +137,7 @@ export default function DataSourcesView() {
                   <span style={{ fontSize: '13px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
                 </div>
               ) : (
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Waiting for file...</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('sources.waiting')}</div>
               )}
             </div>
           ))}
@@ -151,15 +150,15 @@ export default function DataSourcesView() {
             disabled={!sfFile || !twFile || processing}
             onClick={handleProcess}
             style={{ opacity: sfFile && twFile ? 1 : 0.4, cursor: sfFile && twFile ? 'pointer' : 'not-allowed' }}>
-            {processing ? '⏳ Processing...' : '⚡ Run Reconciliation'}
+            {processing ? t('action.processing') : t('action.runRecon')}
           </button>
           {processed && (
             <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ color: '#10B981', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <CheckCircle2 size={15} /> Reconciliation complete — check the Dashboard
+              <CheckCircle2 size={15} /> {t('sources.reconComplete')}
             </motion.span>
           )}
           {!sfFile && !twFile && (
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Upload both files to run</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('sources.uploadBoth')}</span>
           )}
         </div>
       </div>
@@ -167,11 +166,11 @@ export default function DataSourcesView() {
       {/* ── Upload History (paginated + searchable) ── */}
       <div className="data-table-wrapper">
         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontWeight: '700', fontSize: '14px' }}>Upload History</div>
+          <div style={{ fontWeight: '700', fontSize: '14px' }}>{t('sources.historyTitle')}</div>
           <div className="search-container" style={{ width: '280px' }}>
             <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
-              type="text" placeholder="Search by filename or type..."
+              type="text" placeholder={t('sources.searchHistory')}
               className="search-input-bespoke"
               value={historySearch}
               onChange={e => { setHistorySearch(e.target.value); setHistoryPage(1); }}
@@ -181,7 +180,7 @@ export default function DataSourcesView() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Type</th><th>Filename</th><th>Records</th><th>Uploaded</th><th>Status</th>
+              <th>{t('table.type')}</th><th>{t('table.filename')}</th><th>{t('table.records')}</th><th>{t('table.uploaded')}</th><th>{t('table.status')}</th>
             </tr>
           </thead>
           <tbody>
@@ -195,17 +194,17 @@ export default function DataSourcesView() {
                 <td style={{ fontWeight: '500', fontSize: '13px' }}>{h.filename}</td>
                 <td>{h.records.toLocaleString()}</td>
                 <td style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{h.uploadedAt}</td>
-                <td><span className="status-pill status-matched"><CheckCircle2 size={11} /> {h.status}</span></td>
+                <td><span className="status-pill status-matched"><CheckCircle2 size={11} /> {t('status.processed')}</span></td>
               </tr>
             ))}
             {pagedHistory.length === 0 && (
-              <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No results for "{historySearch}"</td></tr>
+              <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('table.noResults', { q: historySearch })}</td></tr>
             )}
           </tbody>
         </table>
         {/* Pagination */}
         <div style={{ padding: '0.75rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', fontSize: '13px', color: 'var(--text-muted)' }}>
-          <span>Showing {Math.min((historyPage - 1) * PAGE_SIZE + 1, filteredHistory.length)}–{Math.min(historyPage * PAGE_SIZE, filteredHistory.length)} of {filteredHistory.length} files</span>
+          <span>{t('sources.showingResults', { from: Math.min((historyPage - 1) * PAGE_SIZE + 1, filteredHistory.length), to: Math.min(historyPage * PAGE_SIZE, filteredHistory.length), total: filteredHistory.length })}</span>
           <div style={{ display: 'flex', gap: '6px' }}>
             <button className="btn-premium btn-ghost" style={{ padding: '4px 10px', fontSize: '12px' }} disabled={historyPage === 1} onClick={() => setHistoryPage(p => p - 1)}>
               <ChevronLeft size={13} />

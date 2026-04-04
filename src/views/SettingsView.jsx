@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Settings, DollarSign, Globe, FileText, Save, CheckCircle2 } from 'lucide-react';
+import { useT } from '../i18n/index.jsx';
 
 const LS_KEY = 'aleph-recon-settings';
 
@@ -62,6 +63,7 @@ const SelectField = ({ label, stateKey, value, onChange, options }) => (
 );
 
 export default function SettingsView() {
+  const { t } = useT();
   const saved_raw = localStorage.getItem(LS_KEY);
   const saved_data = saved_raw ? JSON.parse(saved_raw) : {};
 
@@ -81,19 +83,19 @@ export default function SettingsView() {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
         <div>
-          <Section title="Reconciliation Thresholds" icon={Settings}>
+          <Section title={t('settings.thresholds')} icon={Settings}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <Field label="Match Tolerance (USD)" stateKey="matchTolerance" value={cfg.matchTolerance} onChange={setField} type="number" suffix="USD" />
-              <Field label="Auto-escalation (days)" stateKey="escalationDays" value={cfg.escalationDays} onChange={setField} type="number" suffix="days" />
-              <Field label="Error threshold (%)" stateKey="errorThreshold" value={cfg.errorThreshold} onChange={setField} type="number" suffix="%" />
-              <Field label="Max Discrepancy Alert" stateKey="maxDiscrepancy" value={cfg.maxDiscrepancy} onChange={setField} type="number" suffix="USD" />
+              <Field label={t('settings.matchTolerance')} stateKey="matchTolerance" value={cfg.matchTolerance} onChange={setField} type="number" suffix="USD" />
+              <Field label={t('settings.escalationDays')} stateKey="escalationDays" value={cfg.escalationDays} onChange={setField} type="number" suffix="days" />
+              <Field label={t('settings.errorThreshold')} stateKey="errorThreshold" value={cfg.errorThreshold} onChange={setField} type="number" suffix="%" />
+              <Field label={t('settings.maxDiscrepancy')} stateKey="maxDiscrepancy" value={cfg.maxDiscrepancy} onChange={setField} type="number" suffix="USD" />
             </div>
           </Section>
 
-          <Section title="Export Preferences" icon={FileText}>
+          <Section title={t('settings.exportPrefs')} icon={FileText}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <SelectField
-                label="Default Export Format"
+                label={t('settings.exportFormat')}
                 stateKey="exportFormat"
                 value={cfg.exportFormat}
                 onChange={setField}
@@ -103,20 +105,20 @@ export default function SettingsView() {
                   { value: 'pdf', label: 'PDF (.pdf)' },
                 ]}
               />
-              <Field label="Report Naming Convention" stateKey="namingConvention" value={cfg.namingConvention} onChange={setField} />
+              <Field label={t('settings.namingConvention')} stateKey="namingConvention" value={cfg.namingConvention} onChange={setField} />
             </div>
             <div style={{ marginTop: '1rem' }}>
-              <Field label="CC Email on Export" stateKey="ccEmail" value={cfg.ccEmail} onChange={setField} />
+              <Field label={t('settings.ccEmail')} stateKey="ccEmail" value={cfg.ccEmail} onChange={setField} />
             </div>
           </Section>
         </div>
 
         <div>
-          <Section title="Region & Currency Config" icon={Globe}>
+          <Section title={t('settings.regionConfig')} icon={Globe}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
               <thead>
                 <tr>
-                  {['Region', 'Currency', 'Tax Rate', 'Active'].map((h, i) => (
+                  {[t('settings.region'), t('settings.currency'), t('settings.taxRate'), t('settings.active')].map((h, i) => (
                     <th key={h} style={{ textAlign: i === 3 ? 'center' : 'left', padding: '6px 0', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                   ))}
                 </tr>
@@ -140,10 +142,10 @@ export default function SettingsView() {
             </table>
           </Section>
 
-          <Section title="Billing Currency" icon={DollarSign}>
+          <Section title={t('settings.billingCurrency')} icon={DollarSign}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <SelectField
-                label="Base Currency"
+                label={t('settings.baseCurrency')}
                 stateKey="baseCurrency"
                 value={cfg.baseCurrency}
                 onChange={setField}
@@ -157,16 +159,15 @@ export default function SettingsView() {
                   { value: 'EUR', label: 'EUR — Euro' },
                 ]}
               />
-              <Field label="FX Rate Source" stateKey="fxSource" value={cfg.fxSource} onChange={setField} />
+              <Field label={t('settings.fxSource')} stateKey="fxSource" value={cfg.fxSource} onChange={setField} />
             </div>
           </Section>
         </div>
       </div>
 
-      {/* Save Button */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
         <button className="btn-premium btn-solid" onClick={handleSave} style={{ padding: '12px 28px' }}>
-          {saved ? <><CheckCircle2 size={15} /> Settings saved!</> : <><Save size={15} /> Save Settings</>}
+          {saved ? <><CheckCircle2 size={15} /> {t('action.saved')}</> : <><Save size={15} /> {t('action.save')}</>}
         </button>
       </div>
     </motion.div>
