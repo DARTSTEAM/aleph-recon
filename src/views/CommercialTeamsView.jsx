@@ -109,26 +109,6 @@ export default function CommercialTeamsView() {
         {previewIO && <IOPreview item={previewIO} onClose={() => setPreviewIO(null)} />}
       </AnimatePresence>
 
-      {/* Summary cards — only show managers with issues */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        {withErrors.map(m => (
-          <div key={m.id} className="bento-card" style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '800', fontSize: '14px', flexShrink: 0 }}>
-              {m.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-            </div>
-            <div>
-              <div style={{ fontWeight: '700', fontSize: '13px' }}>{m.name}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{m.region}</div>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '6px', fontSize: '11px', fontWeight: '700' }}>
-                <span style={{ color: '#10B981' }}>{m.okCount} OK</span>
-                <span style={{ color: '#EF4444' }}>{m.errors} Err</span>
-                {m.fixing > 0 && <span style={{ color: '#F59E0B' }}>{m.fixing} Fix</span>}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* Portfolio table */}
       <div className="data-table-wrapper">
         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

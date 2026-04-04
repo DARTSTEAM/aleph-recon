@@ -318,11 +318,16 @@ function App() {
       {/* Main Content */}
       <main className="content-area">
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2.5rem' }}>
-          <div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '4px' }}>
-              Dashboard &rsaquo; {activeView.charAt(0).toUpperCase() + activeView.slice(1)} {useFirestore && <span style={{ color: '#10B981', marginLeft: '8px' }}>● Live</span>}
-            </div>
-            <h1>{activeView === 'dashboard' ? 'Q1 2026 Reconciliation' : activeView.charAt(0).toUpperCase() + activeView.slice(1)}</h1>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+            <h1>{
+              activeView === 'dashboard' ? 'Q1 2026 Reconciliation' :
+              activeView === 'recon' ? 'Reconciliations' :
+              activeView === 'sources' ? 'Data Sources' :
+              activeView === 'teams' ? 'Commercial Teams' :
+              activeView === 'notifications' ? 'Notifications' :
+              activeView.charAt(0).toUpperCase() + activeView.slice(1)
+            }</h1>
+            {useFirestore && <span style={{ fontSize: '11px', color: '#10B981', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>● Live</span>}
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             {saving && <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}><RefreshCw size={14} className="animate-spin" /> Syncing...</span>}
