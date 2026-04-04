@@ -4,10 +4,10 @@
 import * as XLSX from 'xlsx';
 
 export const ERROR_TYPES = {
-  BUDGET: 'Budget',
-  TAX: 'Taxes',
-  COMMISSION: 'Commission',
-  DELIVERY: 'Delivery Mismatch',
+  BUDGET: 'recon.category.budget',
+  TAX: 'recon.category.taxes',
+  COMMISSION: 'recon.category.commission',
+  DELIVERY: 'recon.category.delivery',
   UNKNOWN: 'Unknown'
 };
 
@@ -40,7 +40,7 @@ export const reconcileData = (sfRecords, twRecords) => {
     if (!tw) {
       status = 'Error';
       category = ERROR_TYPES.DELIVERY;
-      comment = 'IO not found in Twitter Billing Report';
+      comment = 'recon.ioNotFound';
     } else if (Math.abs(diff) > 0.05) {
       status = 'Error';
       // Basic heuristic to categorize error
@@ -49,7 +49,7 @@ export const reconcileData = (sfRecords, twRecords) => {
       } else {
         category = ERROR_TYPES.TAX; // Small diffs often mean tax roundings
       }
-      comment = `Discrepancy of $${diff.toFixed(2)}`;
+      comment = 'recon.discrepancyMsg';
     }
 
     result.push({
@@ -63,7 +63,8 @@ export const reconcileData = (sfRecords, twRecords) => {
       status,
       category,
       comment,
-      lastFollowUp: null
+      lastFollowUp: null,
+      commentParams: { diff: `$${diff.toFixed(2)}` }
     });
   });
 

@@ -45,7 +45,7 @@ const FAQ_ES = [
   },
   {
     q: '¿Con qué frecuencia debo ejecutar una reconciliación?',
-    a: 'Típicamente una vez por mes al cierre de mes. Subí el último export de Salesforce y el archivo de facturación mensual de Twitter (de IMS) para generar la reconciliación. Ambos archivos deben corresponder al mismo período de facturación.'
+    a: 'Típicamente una vez por mes al cierre de mes. Subí el último export de Salesforce y el archivo de facturación mensual de Twitter (de IMS) para generar la reconciliación. Ambos archivos deben correspondientes al mismo período de facturación.'
   },
   {
     q: '¿Qué formato de archivo de Twitter se espera?',
@@ -53,15 +53,15 @@ const FAQ_ES = [
   },
   {
     q: '¿Qué campos de Salesforce se usan para el matching?',
-    a: 'El motor de reconciliación usa "Publisher POID" (o "IO Number") como clave primaria para hacer match de registros, y "Bill Net Budget" como referencia de presupuesto para comparar contra el gasto de Twitter.'
+    a: 'El motor de reconciliación usa "Publisher POID" (o "IO Number") como clave primaria para hacer match de registros, y "Bill Net Budget" como referencia de presupuesto para comprar contra el gasto de Twitter.'
   },
 ];
 
-const DOC_LINKS = [
-  { icon: FileText, label: 'Reconciliation Process SOP', desc: 'Step-by-step monthly close procedure', href: '#' },
-  { icon: BookOpen, label: 'Twitter IMS Billing Guide', desc: 'How to download the monthly billing file', href: '#' },
-  { icon: FileText, label: 'Salesforce Export Settings', desc: 'Required fields and export configuration', href: '#' },
-  { icon: MessageSquare, label: 'Error Category Taxonomy', desc: 'Budget vs Tax vs Commission classification guide', href: '#' },
+const getDocLinks = (t) => [
+  { icon: FileText, label: t('help.doc.sop.label'), desc: t('help.doc.sop.desc'), href: '#' },
+  { icon: BookOpen, label: t('help.doc.billing.label'), desc: t('help.doc.billing.desc'), href: '#' },
+  { icon: FileText, label: t('help.doc.sf.label'), desc: t('help.doc.sf.desc'), href: '#' },
+  { icon: MessageSquare, label: t('help.doc.taxonomy.label'), desc: t('help.doc.taxonomy.desc'), href: '#' },
 ];
 
 export default function HelpView() {
@@ -69,6 +69,7 @@ export default function HelpView() {
   const [openFaq, setOpenFaq] = useState(null);
 
   const FAQ = lang === 'es' ? FAQ_ES : FAQ_EN;
+  const DOC_LINKS = getDocLinks(t);
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -122,11 +123,9 @@ export default function HelpView() {
 
           {/* Support Contact */}
           <div className="bento-card" style={{ background: '#F8F9FF', border: '1px solid #E0E7FF' }}>
-            <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '6px' }}>{lang === 'es' ? '¿Necesitás ayuda?' : 'Need help?'}</div>
+            <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '6px' }}>{t('help.needHelp')}</div>
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: '1.5' }}>
-              {lang === 'es'
-                ? 'Contactá al equipo de Aleph Finance Operations para ayuda con problemas de reconciliación, discrepancias de datos o acceso a la herramienta.'
-                : 'Contact the Aleph Finance Operations team for assistance with reconciliation issues, data discrepancies, or tool access.'}
+              {t('help.supportDesc')}
             </div>
             <a
               href="mailto:finance-ops@alephholding.com?subject=[Recon Studio] Support Request"

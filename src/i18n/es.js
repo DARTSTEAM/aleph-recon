@@ -186,8 +186,45 @@ export const es = {
   'toast.sendingEmails': 'Enviando {n} emails...',
   'toast.bulkSent': '{n} emails enviados exitosamente ✓',
   'toast.bulkFailed': 'Envío masivo fallido: {error}',
+  'toast.emailSent': 'Email enviado a {manager} ✓',
+  'toast.apiUnavailable': 'API no disponible — se abrió el borrador de email',
+  'toast.emailFailed': 'Error al enviar email: {error}',
+  'toast.errorReadingFile': 'Error al leer el archivo. Asegurate de que sea un .xlsx válido',
+
+  // ── Confirms ─────────────────────────────────────────────────────────────────
+  'confirm.bulkNotify': '¿Enviar seguimientos en lote para las {n} discrepancias abiertas?',
 
   // ── Claves extra de tabla ────────────────────────────────────────────────────
   'table.category': 'Categoría',
   'table.comment': 'Comentario',
+  'table.managerLabel': 'Mgr: ',
+  'table.noDiscrepancies': 'Sin discrepancias',
+
+  // ── Página de Login ─────────────────────────────────────────────────────────
+  'auth.placeholderUser': 'Usuario',
+  'auth.placeholderPass': 'Contraseña',
+  'auth.testAccessLabel': 'O ACCESO DE PRUEBA',
+  // ── Emails ───────────────────────────────────────────────────────────────────
+  'email.subject': '[Aleph Finanzas] Discrepancia de Reconciliación - IO {io}',
+  'email.body': 'Hola {manager},\n\nIdentificamos una diferencia en la reconciliación del IO {io} ({account}).\n\nPresupuesto SF: {sfBudget}\nFacturación Twitter: {twBilling}\nDiscrepancia: {diff}\nCategoría: {category}\n\nPor favor revisá y actualizá Salesforce.\n\nSaludos,\nAleph Finance Operations',
+
+  // ── Motor de Reconciliación ──────────────────────────────────────────────────
+  'recon.ioNotFound': 'IO no encontrado en el reporte de facturación de Twitter',
+  'recon.discrepancyMsg': 'Discrepancia de {diff}',
+  'recon.category.budget': 'Presupuesto',
+  'recon.category.taxes': 'Impuestos',
+  'recon.category.commission': 'Comisión',
+  'recon.category.delivery': 'Diferencia de Entrega',
+
+  // ── Ayuda ────────────────────────────────────────────────────────────────────
+  'help.needHelp': '¿Necesitás ayuda?',
+  'help.supportDesc': 'Contactá al equipo de Aleph Finance Operations para ayuda con problemas de reconciliación, discrepancias de datos o acceso a la herramienta.',
+  'help.doc.sop.label': 'Paso a paso Reconciliación (SOP)',
+  'help.doc.sop.desc': 'Procedimiento mensual detallado para cierre',
+  'help.doc.billing.label': 'Guía de Facturación Twitter IMS',
+  'help.doc.billing.desc': 'Cómo descargar el archivo mensual de IMS',
+  'help.doc.sf.label': 'Configuración Export Salesforce',
+  'help.doc.sf.desc': 'Campos obligatorios y configuración de reporte',
+  'help.doc.taxonomy.label': 'Taxonomía de Categorías',
+  'help.doc.taxonomy.desc': 'Guía de clasificación: Presupuesto vs Impuestos vs Comisión',
 };

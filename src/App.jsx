@@ -20,12 +20,12 @@ import { sendFollowUpEmail, sendBulkFollowUpEmails, checkApiHealth } from './uti
 import { useT } from './i18n/index.jsx';
 
 const MOCK_RECON_ITEMS = [
-  { id: '1', io: 'TW-50473210', account: "L'Oréal Argentina", manager: 'Mariana Tunno', sfBudget: 12500, twBilling: 12500, diff: 0, status: 'Matched', category: 'Budget' },
-  { id: '2', io: 'TW-10573655', account: 'Mercado Libre MEX', manager: 'Silvia Rodriguez', sfBudget: 45200, twBilling: 48900.50, diff: -3700.50, status: 'Error', category: 'Taxes', comment: 'LATAM Retención 5% not applied in SF' },
-  { id: '3', io: 'TW-10573702', account: 'Netflix BR', manager: 'Santiago G.', sfBudget: 82000, twBilling: 82000, diff: 0, status: 'Matched', category: 'Budget' },
-  { id: '4', io: 'TW-10573662', account: 'Samsung AR', manager: 'Bautista B.', sfBudget: 15400, twBilling: 18200, diff: -2800, status: 'Error', category: 'Commission', comment: 'Wrong Commission tier (15% vs 8%)' },
-  { id: '5', io: 'TW-10573626', account: 'Coca-Cola CL', manager: 'Mariana Tunno', sfBudget: 22000, twBilling: 22000, diff: 0, status: 'Matched', category: 'Budget' },
-  { id: '6', io: 'TW-10573729', account: 'Unilever AR', manager: 'Silvia Rodriguez', sfBudget: 5600, twBilling: 7200, diff: -1600, status: 'Error', category: 'Budget', comment: 'Delivery report vs Billing report mismatch' },
+  { id: '1', io: 'TW-50473210', account: "L'Oréal Argentina", manager: 'Mariana Tunno', sfBudget: 12500, twBilling: 12500, diff: 0, status: 'Matched', category: 'recon.category.budget' },
+  { id: '2', io: 'TW-10573655', account: 'Mercado Libre MEX', manager: 'Silvia Rodriguez', sfBudget: 45200, twBilling: 48900.50, diff: -3700.50, status: 'Error', category: 'recon.category.taxes', comment: 'recon.discrepancyMsg', commentParams: { diff: '-$3,700.50' } },
+  { id: '3', io: 'TW-10573702', account: 'Netflix BR', manager: 'Santiago G.', sfBudget: 82000, twBilling: 82000, diff: 0, status: 'Matched', category: 'recon.category.budget' },
+  { id: '4', io: 'TW-10573662', account: 'Samsung AR', manager: 'Bautista B.', sfBudget: 15400, twBilling: 18200, diff: -2800, status: 'Error', category: 'recon.category.commission', comment: 'recon.discrepancyMsg', commentParams: { diff: '-$2,800.00' } },
+  { id: '5', io: 'TW-10573626', account: 'Coca-Cola CL', manager: 'Mariana Tunno', sfBudget: 22000, twBilling: 22000, diff: 0, status: 'Matched', category: 'recon.category.budget' },
+  { id: '6', io: 'TW-10573729', account: 'Unilever AR', manager: 'Silvia Rodriguez', sfBudget: 5600, twBilling: 7200, diff: -1600, status: 'Error', category: 'recon.category.budget', comment: 'recon.ioNotFound' },
 ];
 
 // --- Login Screen ---
@@ -79,19 +79,19 @@ function LoginScreen({ onLogin, onDevLogin }) {
         {/* Divider */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.5rem' }}>
           <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>{lang === 'es' ? 'O ACCESO DE PRUEBA' : 'OR TEST ACCESS'}</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>{t('auth.testAccessLabel')}</span>
           <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
         </div>
 
         {/* Dev Login Form */}
         <form onSubmit={handleDevLogin} style={{ textAlign: 'left' }}>
           <input
-            type="text" placeholder="Username" value={creds.user}
+            type="text" placeholder={t('auth.placeholderUser')} value={creds.user}
             onChange={e => setCreds(p => ({ ...p, user: e.target.value }))}
             style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border-strong)', borderRadius: '8px', fontSize: '14px', outline: 'none', marginBottom: '8px', fontFamily: 'var(--font-brand)' }}
           />
           <input
-            type="password" placeholder="Password" value={creds.pass}
+            type="password" placeholder={t('auth.placeholderPass')} value={creds.pass}
             onChange={e => setCreds(p => ({ ...p, pass: e.target.value }))}
             style={{ width: '100%', padding: '10px 14px', border: `1px solid ${error ? '#FCA5A5' : 'var(--border-strong)'}`, borderRadius: '8px', fontSize: '14px', outline: 'none', marginBottom: '8px', fontFamily: 'var(--font-brand)' }}
           />
@@ -102,7 +102,7 @@ function LoginScreen({ onLogin, onDevLogin }) {
         </form>
 
         <p style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '1.5rem' }}>
-          {lang === 'es' ? 'Acceso de producción restringido a Aleph Finance Operations' : 'Production access restricted to Aleph Finance Operations'}
+          {t('auth.restrictedProp')}
         </p>
       </motion.div>
     </div>
@@ -210,7 +210,7 @@ function App() {
       const data = await readExcelFile(file);
       if (type === 'sf') setSfData(data);
       if (type === 'tw') setTwData(data);
-    } catch (err) { alert('Error reading file. Make sure it is a valid .xlsx'); }
+    } catch (err) { alert(t('toast.errorReadingFile')); }
   };
 
   // --- Reconcile + save to Firestore ---
@@ -235,10 +235,21 @@ function App() {
     // Firestore update (best effort)
     try { await updateItemStatus(item.io, 'Fixing', item.manager, activeUser.email); } catch (_) {}
     // Real email via API
-    const result = await sendFollowUpEmail(item, activeUser.email);
-    if (result.success) showToast(`Email sent to ${item.manager} ✓`);
-    else if (result.fallback) showToast('API unavailable — email draft opened instead', 'warn');
-    else showToast(`Email failed: ${result.error}`, 'error');
+    const result = await sendFollowUpEmail(item, activeUser.email, {
+      subject: t('email.subject', { io: item.io }),
+      body: t('email.body', {
+        manager: item.manager,
+        io: item.io,
+        account: item.account,
+        sfBudget: `$${item.sfBudget?.toLocaleString()}`,
+        twBilling: `$${item.twBilling?.toLocaleString()}`,
+        diff: `-$${Math.abs(item.diff)?.toLocaleString()}`,
+        category: item.category || 'Unknown'
+      })
+    });
+    if (result.success) showToast(t('toast.emailSent', { manager: item.manager }));
+    else if (result.fallback) showToast(t('toast.apiUnavailable'), 'warn');
+    else showToast(t('toast.emailFailed', { error: result.error }), 'error');
   };
 
   const handleResolve = async (item) => {
@@ -407,7 +418,7 @@ function App() {
               {errorCount > 0 && (
                 <button className="btn-premium" style={{ padding: '8px 14px', fontSize: '12px', background: '#FFF5F5', color: '#E53E3E', border: '1px solid #FED7D7' }}
                   onClick={async () => {
-                    if (!confirm(`Bulk send follow-up emails for all ${errorCount} open discrepancies?`)) return;
+                    if (!confirm(t('confirm.bulkNotify', { n: errorCount }))) return;
                     const activeUser = firebaseUser || { email: 'admin@aleph.test' };
                     showToast(t('toast.sendingEmails', { n: errorCount }), 'info');
                     const result = await sendBulkFollowUpEmails(items, activeUser.email);
@@ -423,7 +434,7 @@ function App() {
                   const rows = items.map(i => [
                     i.io, i.account, i.manager,
                     i.sfBudget, i.twBilling, i.diff,
-                    i.category || '', i.status, i.comment || ''
+                    t(i.category || ''), i.status, t(i.comment || '', i.commentParams)
                   ]);
                   const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
                   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -459,7 +470,7 @@ function App() {
                     <td className="io-code">{item.io}</td>
                     <td>
                       <span style={{ display: 'block', fontWeight: '600', color: 'var(--text-primary)', fontSize: '14px' }}>{item.account}</span>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>Mgr: {item.manager}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>{t('table.managerLabel')}{item.manager}</span>
                     </td>
                     <td style={{ fontWeight: '600' }}>${(item.sfBudget || 0).toLocaleString()}</td>
                     <td style={{ fontWeight: '600' }}>${(item.twBilling || 0).toLocaleString()}</td>
@@ -475,7 +486,9 @@ function App() {
                       </span>
                     </td>
                     <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {item.comment || <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>{lang === 'es' ? 'Sin discrepancias' : 'No discrepancies'}</span>}
+                      {item.comment 
+                        ? t(item.comment, item.commentParams) 
+                        : <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>{t('table.noDiscrepancies')}</span>}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>

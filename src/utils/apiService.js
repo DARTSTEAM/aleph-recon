@@ -15,7 +15,7 @@ const authHeaders = () => ({
  * Send a follow-up email to a manager for a specific IO discrepancy.
  * Falls back gracefully if the API is unavailable.
  */
-export async function sendFollowUpEmail(item, sentByEmail = 'admin@aleph.test') {
+export async function sendFollowUpEmail(item, sentByEmail = 'admin@aleph.test', options = {}) {
   const payload = {
     io: item.io,
     account: item.account,
@@ -43,9 +43,10 @@ export async function sendFollowUpEmail(item, sentByEmail = 'admin@aleph.test') 
     return await res.json(); // { success: true, messageId, to }
   } catch (err) {
     console.warn('[api] sendFollowUpEmail failed, falling back to mailto:', err.message);
-    // Graceful fallback — open mailto
-    const subject = encodeURIComponent(`[Aleph Finance] Reconciliation Discrepancy - IO ${item.io}`);
-    const body = encodeURIComponent(
+    
+    // Graceful fallback — use translated subject/body if provided
+    const subject = encodeURIComponent(options.subject || `[Aleph Finance] Reconciliation Discrepancy - IO ${item.io}`);
+    const body = encodeURIComponent(options.body ||
       `Hi ${item.manager},\n\nWe identified a reconciliation discrepancy for IO ${item.io} (${item.account}).\n\nSF Net Budget: $${item.sfBudget?.toLocaleString()}\nTwitter Billing: $${item.twBilling?.toLocaleString()}\nDiscrepancy: -$${Math.abs(item.diff)?.toLocaleString()}\nCategory: ${item.category || 'Unknown'}\n\nPlease review and update Salesforce.\n\nRegards,\nAleph Finance Ops`
     );
     const to = item.managerEmail || guessEmail(item.manager);

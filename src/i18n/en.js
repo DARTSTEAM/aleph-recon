@@ -186,8 +186,45 @@ export const en = {
   'toast.sendingEmails': 'Sending {n} emails...',
   'toast.bulkSent': '{n} emails sent successfully ✓',
   'toast.bulkFailed': 'Bulk send failed: {error}',
+  'toast.emailSent': 'Email sent to {manager} ✓',
+  'toast.apiUnavailable': 'API unavailable — email draft opened instead',
+  'toast.emailFailed': 'Email failed: {error}',
+  'toast.errorReadingFile': 'Error reading file. Make sure it is a valid .xlsx',
+
+  // ── Confirms ─────────────────────────────────────────────────────────────────
+  'confirm.bulkNotify': 'Bulk send follow-up emails for all {n} open discrepancies?',
 
   // ── Extra table keys ─────────────────────────────────────────────────────────
   'table.category': 'Category',
   'table.comment': 'Comment',
+  'table.managerLabel': 'Mgr: ',
+  'table.noDiscrepancies': 'No discrepancies',
+
+  // ── Login Page ──────────────────────────────────────────────────────────────
+  'auth.placeholderUser': 'Username',
+  'auth.placeholderPass': 'Password',
+  'auth.testAccessLabel': 'OR TEST ACCESS',
+  // ── Emails ───────────────────────────────────────────────────────────────────
+  'email.subject': '[Aleph Finance] Reconciliation Discrepancy - IO {io}',
+  'email.body': 'Hi {manager},\n\nWe identified a reconciliation discrepancy for IO {io} ({account}).\n\nSF Net Budget: {sfBudget}\nTwitter Billing: {twBilling}\nDiscrepancy: {diff}\nCategory: {category}\n\nPlease review and update Salesforce.\n\nRegards,\nAleph Finance Ops',
+
+  // ── Reconciliation Engine ─────────────────────────────────────────────────────
+  'recon.ioNotFound': 'IO not found in Twitter Billing Report',
+  'recon.discrepancyMsg': 'Discrepancy of {diff}',
+  'recon.category.budget': 'Budget',
+  'recon.category.taxes': 'Taxes',
+  'recon.category.commission': 'Commission',
+  'recon.category.delivery': 'Delivery Mismatch',
+
+  // ── Help View ────────────────────────────────────────────────────────────────
+  'help.needHelp': 'Need help?',
+  'help.supportDesc': 'Contact the Aleph Finance Operations team for assistance with reconciliation issues, data discrepancies, or tool access.',
+  'help.doc.sop.label': 'Reconciliation Process SOP',
+  'help.doc.sop.desc': 'Step-by-step monthly close procedure',
+  'help.doc.billing.label': 'Twitter IMS Billing Guide',
+  'help.doc.billing.desc': 'How to download the monthly billing file',
+  'help.doc.sf.label': 'Salesforce Export Settings',
+  'help.doc.sf.desc': 'Required fields and export configuration',
+  'help.doc.taxonomy.label': 'Error Category Taxonomy',
+  'help.doc.taxonomy.desc': 'Budget vs Tax vs Commission classification guide',
 };
