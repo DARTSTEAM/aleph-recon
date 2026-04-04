@@ -48,6 +48,19 @@ const Field = ({ label, stateKey, value, onChange, type = 'text', suffix }) => (
   </div>
 );
 
+const SelectField = ({ label, stateKey, value, onChange, options }) => (
+  <div>
+    <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>{label}</div>
+    <select
+      value={value}
+      onChange={e => onChange(stateKey, e.target.value)}
+      style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border-strong)', borderRadius: '8px', fontSize: '13px', fontFamily: 'var(--font-brand)', outline: 'none', color: 'var(--text-primary)', background: 'white', cursor: 'pointer', appearance: 'auto' }}
+    >
+      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  </div>
+);
+
 export default function SettingsView() {
   const saved_raw = localStorage.getItem(LS_KEY);
   const saved_data = saved_raw ? JSON.parse(saved_raw) : {};
@@ -79,7 +92,17 @@ export default function SettingsView() {
 
           <Section title="Export Preferences" icon={FileText}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <Field label="Default Export Format" stateKey="exportFormat" value={cfg.exportFormat} onChange={setField} />
+              <SelectField
+                label="Default Export Format"
+                stateKey="exportFormat"
+                value={cfg.exportFormat}
+                onChange={setField}
+                options={[
+                  { value: 'xlsx', label: 'Excel (.xlsx)' },
+                  { value: 'csv', label: 'CSV (.csv)' },
+                  { value: 'pdf', label: 'PDF (.pdf)' },
+                ]}
+              />
               <Field label="Report Naming Convention" stateKey="namingConvention" value={cfg.namingConvention} onChange={setField} />
             </div>
             <div style={{ marginTop: '1rem' }}>
@@ -119,7 +142,21 @@ export default function SettingsView() {
 
           <Section title="Billing Currency" icon={DollarSign}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <Field label="Base Currency" stateKey="baseCurrency" value={cfg.baseCurrency} onChange={setField} />
+              <SelectField
+                label="Base Currency"
+                stateKey="baseCurrency"
+                value={cfg.baseCurrency}
+                onChange={setField}
+                options={[
+                  { value: 'USD', label: 'USD — US Dollar' },
+                  { value: 'ARS', label: 'ARS — Argentine Peso' },
+                  { value: 'MXN', label: 'MXN — Mexican Peso' },
+                  { value: 'BRL', label: 'BRL — Brazilian Real' },
+                  { value: 'CLP', label: 'CLP — Chilean Peso' },
+                  { value: 'COP', label: 'COP — Colombian Peso' },
+                  { value: 'EUR', label: 'EUR — Euro' },
+                ]}
+              />
               <Field label="FX Rate Source" stateKey="fxSource" value={cfg.fxSource} onChange={setField} />
             </div>
           </Section>
