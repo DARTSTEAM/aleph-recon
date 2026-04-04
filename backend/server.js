@@ -154,7 +154,8 @@ Aleph Revenue Recognition Team
   </div>
 
   <div style="border-top:1px solid #E5E7EB;padding-top:20px;font-size:12px;color:#9CA3AF">
-    Sent by <strong>${sentBy}</strong> via Aleph Recon Studio · ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+    Sent on behalf of <strong style="color:#374151">${sentBy}</strong> via Aleph Recon Studio · ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}<br/>
+    <span style="color:#10B981">↩ Replies go directly to ${sentBy}</span>
   </div>
 </div>`;
 
@@ -165,9 +166,9 @@ Aleph Revenue Recognition Team
       }
 
       const info = await transporter.sendMail({
-        from: `"Aleph Finance Ops" <${process.env.GMAIL_USER}>`,
+        from: `"Aleph Recon Studio" <${process.env.GMAIL_USER}>`,
         to: managerEmail,
-        cc: sentBy !== process.env.GMAIL_USER ? sentBy : undefined,
+        replyTo: sentBy,  // replies go to the logged-in user, not the system account
         subject: `[Aleph Finance] Reconciliation Discrepancy — IO ${io} | ${account}`,
         text: templateOverride || defaultBody,
         html,
