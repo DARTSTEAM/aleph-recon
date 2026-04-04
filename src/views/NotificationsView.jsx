@@ -108,43 +108,6 @@ export default function NotificationsView() {
           </button>
         </div>
       </div>
-
-      {/* Notification Log */}
-      <div className="data-table-wrapper">
-        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', fontWeight: '700', fontSize: '14px' }}>
-          Notification Log
-        </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Recipient</th>
-              <th>Reference</th>
-              <th>Sent At</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {NOTIFICATION_LOG.map(n => (
-              <tr key={n.id}>
-                <td>
-                  <span style={{ padding: '3px 8px', borderRadius: '5px', fontSize: '11px', fontWeight: '700', background: n.type === 'Escalation' ? '#FFF5F5' : '#EFF6FF', color: n.type === 'Escalation' ? '#EF4444' : '#1D4ED8' }}>
-                    {n.type}
-                  </span>
-                </td>
-                <td style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{n.to}</td>
-                <td style={{ fontFamily: 'monospace', fontSize: '12px', color: 'var(--primary)' }}>{n.io}</td>
-                <td style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{n.sentAt}</td>
-                <td>
-                  <span className="status-pill status-matched">
-                    <CheckCircle2 size={11} /> {n.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </motion.div>
   );
 }
