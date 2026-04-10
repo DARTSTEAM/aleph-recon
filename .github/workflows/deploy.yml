@@ -6,16 +6,16 @@ on:
       - main
 
 env:
-  PROJECT_ID: hike-fafo
+  PROJECT_ID: hike-agentic-playground
   REGION: us-central1
 
   # Frontend
   FRONTEND_SERVICE: aleph-automation
-  FRONTEND_IMAGE: us-central1-docker.pkg.dev/hike-fafo/aleph-recon/app
+  FRONTEND_IMAGE: us-central1-docker.pkg.dev/hike-agentic-playground/aleph-recon/app
 
   # Backend API
   API_SERVICE: aleph-recon-api
-  API_IMAGE: us-central1-docker.pkg.dev/hike-fafo/aleph-recon/api
+  API_IMAGE: us-central1-docker.pkg.dev/hike-agentic-playground/aleph-recon/api
 
 jobs:
   deploy-frontend:
@@ -43,7 +43,7 @@ jobs:
       - name: Build Frontend Docker image
         run: |
           docker build \
-            --build-arg VITE_API_URL=https://aleph-recon-api-4772ziyq2a-uc.a.run.app \
+            --build-arg VITE_API_URL=https://aleph-recon-api-966549276703.us-central1.run.app \
             --build-arg VITE_API_KEY=${{ secrets.ALEPH_API_KEY }} \
             -t $FRONTEND_IMAGE:${{ github.sha }} \
             -t $FRONTEND_IMAGE:latest \
@@ -106,6 +106,6 @@ jobs:
             --region $REGION \
             --project $PROJECT_ID \
             --allow-unauthenticated \
-            --set-secrets "GMAIL_USER=aleph-gmail-user:latest,GMAIL_APP_PASSWORD=aleph-gmail-app-password:latest,API_KEY=aleph-api-key:latest" \
-            --set-env-vars "ALLOWED_ORIGINS=https://aleph-automation-4772ziyq2a-uc.a.run.app" \
+            --set-secrets "GMAIL_USER=aleph-gmail-user:latest,GMAIL_APP_PASSWORD=aleph-gmail-app-password:latest,API_KEY=aleph-api-key:latest,CRON_SECRET=aleph-cron-secret:latest" \
+            --set-env-vars "ALLOWED_ORIGINS=https://aleph-automation-966549276703.us-central1.run.app,ESCALATION_EMAIL=regional-director@alephholding.com,WEEKLY_SUMMARY_EMAIL=regional-director@alephholding.com" \
             --quiet
