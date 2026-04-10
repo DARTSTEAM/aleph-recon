@@ -16,8 +16,10 @@ const PAGE_SIZE = 4;
 
 function detectFileType(filename = '') {
   const lower = filename.toLowerCase();
-  if (lower.includes('sf_') || lower.includes('salesforce') || lower.includes('export')) return 'Salesforce';
-  if (lower.includes('ims') || lower.includes('billing') || lower.includes('twitter')) return 'Twitter Billing';
+  // Salesforce exports
+  if (lower.includes('sf_') || lower.includes('salesforce') || lower.includes('export') || lower.includes('reconc')) return 'Salesforce';
+  // IMS Billing Files (real Twitter/X naming: "02-2026 IMS Billing File.xlsx")
+  if (lower.includes('ims') || lower.includes('billing') || lower.includes('twitter') || lower.includes(' x ')) return 'Twitter Billing';
   return null;
 }
 

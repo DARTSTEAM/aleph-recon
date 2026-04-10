@@ -207,9 +207,14 @@ function App() {
   const handleFileUpload = async (type, file) => {
     setFiles(prev => ({ ...prev, [type]: file }));
     try {
-      const data = await readExcelFile(file);
+      const fileType = type === 'sf' ? 'sf' : 'twitter';
+      const data = await readExcelFile(file, fileType);
       if (type === 'sf') setSfData(data);
       if (type === 'tw') setTwData(data);
+      // Show which sheet was loaded
+      if (data.sheetName) {
+        showToast(`✓ ${file.name} — sheet "${data.sheetName}" (${data.records?.length ?? 0} rows)`);
+      }
     } catch (err) { alert(t('toast.errorReadingFile')); }
   };
 
@@ -274,7 +279,9 @@ function App() {
   const filtered = items.filter(i =>
     (i.io || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (i.account || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (i.manager || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (i.manager || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (i.invoiceNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (i.country || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const errorCount = items.filter(i => i.status === 'Error').length;
@@ -408,7 +415,7 @@ function App() {
         </div>
 
         {/* Reconciliation Table */}
-        <div className="data-table-wrapper">
+        <div className="data-table-wrapper" style={{ overflowX: 'auto' }}>
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div className="search-container" style={{ width: '380px' }}>
               <Search size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -450,7 +457,7 @@ function App() {
             </div>
           </div>
 
-          <table className="data-table">
+          <table className="data-table" style={{ minWidth: '900px' }}>
             <thead>
               <tr>
                 <th>{t('table.io')}</th>
@@ -471,12 +478,19 @@ function App() {
                     <td>
                       <span style={{ display: 'block', fontWeight: '600', color: 'var(--text-primary)', fontSize: '14px' }}>{item.account}</span>
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>{t('table.managerLabel')}{item.manager}</span>
+                      {(item.invoiceNumber || item.country) && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                          {item.invoiceNumber && <span style={{ fontFamily: 'monospace', fontSize: '10px', fontWeight: '700', color: 'var(--primary)' }}>#{item.invoiceNumber}</span>}
+                          {item.country && <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600' }}>{item.country}</span>}
+                          {item.currency && <span style={{ padding: '0px 4px', borderRadius: '3px', background: '#F0F3FF', color: 'var(--primary)', fontSize: '10px', fontWeight: '800' }}>{item.currency}</span>}
+                        </span>
+                      )}
                     </td>
-                    <td style={{ fontWeight: '600' }}>${(item.sfBudget || 0).toLocaleString()}</td>
-                    <td style={{ fontWeight: '600' }}>${(item.twBilling || 0).toLocaleString()}</td>
+                    <td style={{ fontWeight: '600' }}>{item.currency && item.currency !== 'USD' ? item.currency + ' ' : '$'}{(item.sfBudget || 0).toLocaleString('es-AR')}</td>
+                    <td style={{ fontWeight: '600' }}>{item.currency && item.currency !== 'USD' ? item.currency + ' ' : '$'}{(item.twBilling || 0).toLocaleString('es-AR')}</td>
                     <td>
                       {item.diff !== 0
-                        ? <span style={{ color: 'var(--accent-error)', fontWeight: '800' }}>-${Math.abs(item.diff || 0).toLocaleString()}</span>
+                        ? <span style={{ color: 'var(--accent-error)', fontWeight: '800' }}>-{item.currency ? item.currency + ' ' : '$'}{Math.abs(item.diff || 0).toLocaleString('es-AR')}</span>
                         : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>
                     <td>
