@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, DollarSign, Globe, FileText, Save, CheckCircle2 } from 'lucide-react';
+import { Settings, DollarSign, Globe, FileText, Save, CheckCircle2, Zap, Link } from 'lucide-react';
 import { useT } from '../i18n/index.jsx';
 
 const LS_KEY = 'aleph-recon-settings';
@@ -164,6 +164,53 @@ export default function SettingsView() {
           </Section>
         </div>
       </div>
+
+      <Section title="Integrations" icon={Link}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <Field label="Salesforce Instance URL" stateKey="sfInstanceUrl" value={cfg.sfInstanceUrl || ''} onChange={setField} placeholder="https://yourorg.salesforce.com" />
+          <Field label="Salesforce API Version" stateKey="sfApiVersion" value={cfg.sfApiVersion || 'v59.0'} onChange={setField} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <Field label="Salesforce Client ID (Connected App)" stateKey="sfClientId" value={cfg.sfClientId || ''} onChange={setField} />
+          <Field label="Salesforce Client Secret" stateKey="sfClientSecret" value={cfg.sfClientSecret || ''} onChange={setField} type="password" />
+        </div>
+        <div style={{ padding: '12px 16px', borderRadius: '8px', background: '#F0FDF4', border: '1px solid #BBF7D0', fontSize: '12px', color: '#15803D', lineHeight: '1.6', marginBottom: '1rem' }}>
+          <strong>Setup:</strong> Create a Connected App in Salesforce → OAuth Settings → enable "Client Credentials Flow". Grant access to the Finance Ops integration user. The pull report used is <code>IMS_Billing_Report_YYYY-MM</code>.
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <Field label="Mailgun Inbound Webhook URL" stateKey="mailgunWebhookUrl" value={cfg.mailgunWebhookUrl || ''} onChange={setField} placeholder="https://your-api/api/inbound-email" />
+          <Field label="Inbound Email Domain" stateKey="inboundEmailDomain" value={cfg.inboundEmailDomain || 'alephholding.com'} onChange={setField} />
+        </div>
+      </Section>
+
+      <Section title="Enabled Platforms" icon={Zap}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          {[
+            { key: 'platformTwitter', label: '𝕏 Twitter / X', desc: 'IMS Billing File — Billing Report sheet', color: '#1a1a1a', enabled: true },
+            { key: 'platformMeta',    label: '🔵 Meta / Facebook', desc: 'Meta Ads Manager export — campaign spend', color: '#1877F2', enabled: cfg.platformMeta ?? false },
+            { key: 'platformTikTok',  label: '🎵 TikTok', desc: 'Coming in Sprint 3+', color: '#010101', enabled: false, comingSoon: true },
+            { key: 'platformSnap',    label: '👻 Snapchat', desc: 'Coming in Sprint 3+', color: '#FFFC00', enabled: false, comingSoon: true },
+          ].map(({ key, label, desc, color, enabled, comingSoon }) => (
+            <div key={key} style={{ padding: '14px 16px', borderRadius: '10px', border: `1px solid ${enabled ? color + '33' : 'var(--border-subtle)'}`, background: enabled ? color + '08' : '#FAFAFD', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: comingSoon ? 0.5 : 1 }}>
+              <div>
+                <div style={{ fontWeight: '700', fontSize: '13px', color: comingSoon ? 'var(--text-muted)' : 'var(--text-primary)' }}>{label}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{desc}</div>
+              </div>
+              {comingSoon ? (
+                <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', background: '#F0F1F5', padding: '2px 8px', borderRadius: '20px' }}>Soon</span>
+              ) : key === 'platformTwitter' ? (
+                <span style={{ fontSize: '10px', fontWeight: '700', color: '#10B981', background: '#F0FDF4', padding: '2px 8px', borderRadius: '20px' }}>Active</span>
+              ) : (
+                <div
+                  onClick={() => setField(key, !cfg[key])}
+                  style={{ width: '36px', height: '20px', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s', background: cfg[key] ? color : '#D1D5DB', position: 'relative', flexShrink: 0 }}>
+                  <div style={{ position: 'absolute', top: '2px', left: cfg[key] ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'all 0.2s' }} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </Section>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
         <button className="btn-premium btn-solid" onClick={handleSave} style={{ padding: '12px 28px' }}>

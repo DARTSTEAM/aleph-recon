@@ -3,12 +3,12 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDhIvS4sHJfuAJ94R1MuwZIpfR0pa31ytM",
-  authDomain: "hike-fafo.firebaseapp.com",
-  projectId: "hike-fafo",
-  storageBucket: "hike-fafo.firebasestorage.app",
-  messagingSenderId: "429710757030",
-  appId: "1:429710757030:web:5d693e17de82023dbc3867"
+  apiKey: "AIzaSyAHBf6z6TRhBpqPm2to073VtiHJ7ZyXGv4",
+  authDomain: "hike-agentic-playground.firebaseapp.com",
+  projectId: "hike-agentic-playground",
+  storageBucket: "hike-agentic-playground.firebasestorage.app",
+  messagingSenderId: "966549276703",
+  appId: "1:966549276703:web:d2dc8113a69d14dc62ed2a"
 };
 
 const app = initializeApp(firebaseConfig);

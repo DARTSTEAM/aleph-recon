@@ -1,7 +1,7 @@
 /**
  * aleph-recon/src/utils/reconciler.js
  *
- * Updated to work with real IMS Billing Files and Salesforce exports.
+ * Multi-platform: Twitter/X and Meta/Facebook Billing Files.
  *
  * Key insight from Aleph's process (meeting transcript 2026-03-31):
  * - The unifying ID is "IO Header" in IMS (format T2694837) = "PPO ID" in Salesforce
@@ -10,6 +10,10 @@
  * - SF export has metadata in Rows 1-4; real headers are in Row 5
  * - Invoice # (e.g. 10573677) is Aleph's internal # and matches PDF filenames
  * - Taxes for Argentina: Direct Tax 4.9%, With Tax 15.75%, Commission 15%
+ *
+ * Sprint 3 — Multi-platform additions:
+ * - detectPlatform() identifies Twitter/X vs Meta from filename + column signals
+ * - Meta Billing File uses: "Campaign ID", "Advertiser", "Amount Spent", "Currency"
  */
 import * as XLSX from 'xlsx';
 
@@ -20,6 +24,61 @@ export const ERROR_TYPES = {
   DELIVERY:   'recon.category.delivery',
   UNKNOWN:    'Unknown'
 };
+
+// ─── Platform Detection ───────────────────────────────────────────────────────
+
+const META_SIGNALS = [
+  'Campaign ID', 'Advertiser', 'Amount Spent', 'Reach', 'Impressions',
+  'Ad Account ID', 'Campaign Name', 'Ad Set Name',
+];
+const TW_SIGNALS_COLS = [
+  'IO Header', 'Invoice #', 'Billing Party', 'Total Charges (in USD)',
+];
+
+/**
+ * Detect the billing platform from file content.
+ * Returns 'twitter' | 'meta' | 'unknown'
+ */
+export function detectPlatform(filename = '', records = []) {
+  const lower  = filename.toLowerCase();
+  const sample = records.slice(0, 3);
+
+  // Filename heuristics
+  if (lower.includes('ims') || lower.includes('x billing') || lower.includes('twitter')) return 'twitter';
+  if (lower.includes('meta') || lower.includes('facebook') || lower.includes('fb_ads')) return 'meta';
+
+  // Column heuristics (check first row keys)
+  if (sample.length > 0) {
+    const keys = Object.keys(sample[0]);
+    const metaHits = META_SIGNALS.filter(s => keys.some(k => k.includes(s))).length;
+    const twHits   = TW_SIGNALS_COLS.filter(s => keys.some(k => k.includes(s))).length;
+    if (metaHits >= 2) return 'meta';
+    if (twHits >= 2)   return 'twitter';
+  }
+
+  return 'unknown';
+}
+
+/**
+ * Normalize a Meta Billing File row to the same shape used by the Twitter reconciler.
+ * Meta columns: "Campaign ID", "Advertiser", "Amount Spent", "Currency",
+ *               "Ad Account ID", "Campaign Name", "Reporting Start"
+ */
+function normalizeMeta(records) {
+  return records.map(r => ({
+    // Map Meta keys → internal keys matching the Twitter reconciler expectations
+    'IO Header':                    String(r['Campaign ID'] ?? r['Ad Account ID'] ?? '').trim(),
+    'Invoice #':                    String(r['Invoice Number'] ?? r['Reference'] ?? '').trim(),
+    'Salesforce IO ID':             String(r['Campaign ID'] ?? '').trim(),
+    'Billing Party':                String(r['Advertiser'] ?? r['Ad Account Name'] ?? '').trim(),
+    'Sold To Advertiser':           String(r['Advertiser'] ?? r['Ad Account Name'] ?? '').trim(),
+    'Entered Currency':             String(r['Currency'] ?? 'USD').trim(),
+    'Total Charges (in Entered Curr)': parseFloat(r['Amount Spent'] ?? r['Spend'] ?? 0),
+    'Total Charges (in USD)':       parseFloat(r['Amount Spent (USD)'] ?? r['Amount Spent'] ?? 0),
+    _platform: 'meta',
+    _raw: r,
+  }));
+}
 
 // ─── Sheet Detection ──────────────────────────────────────────────────────────
 
@@ -103,10 +162,11 @@ function rowsToObjects(rows, headerIndex) {
 
 /**
  * Read an Excel file with smart sheet + header-row detection.
- * Returns { records, sheetName, headerIndex, fileType }
+ * Returns { records, sheetName, headerIndex, fileType, platform }
  *
  * Backwards-compatible: reconcileData() accepts both the old plain array
  * and this new object format.
+ * Sprint 3: auto-detects Meta billing files and normalizes columns.
  */
 export const readExcelFile = (file, fileType = 'auto') => {
   return new Promise((resolve, reject) => {
@@ -121,9 +181,15 @@ export const readExcelFile = (file, fileType = 'auto') => {
         const sheet       = workbook.Sheets[sheetName];
         const rawRows     = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
         const headerIndex = findHeaderRowIndex(rawRows, fileType);
-        const records     = rowsToObjects(rawRows, headerIndex);
+        let   records     = rowsToObjects(rawRows, headerIndex);
 
-        resolve({ records, sheetName, headerIndex, fileType });
+        // Sprint 3: detect platform and normalize Meta records
+        const platform = detectPlatform(file.name, records);
+        if (platform === 'meta') {
+          records = normalizeMeta(records);
+        }
+
+        resolve({ records, sheetName, headerIndex, fileType, platform });
       } catch (err) {
         reject(err);
       }
@@ -137,7 +203,7 @@ export const readExcelFile = (file, fileType = 'auto') => {
 // ─── Public: reconcileData ────────────────────────────────────────────────────
 
 /**
- * Cross-reference Salesforce data against the IMS Twitter Billing File.
+ * Cross-reference Salesforce data against a Billing File (Twitter/X or Meta).
  *
  * Primary key:   IO Header in IMS  (e.g. "T2694837")  =  PPO ID in SF
  * Secondary key: Invoice # in IMS  (e.g. "10573677")  =  Aleph internal #
@@ -145,10 +211,14 @@ export const readExcelFile = (file, fileType = 'auto') => {
  *
  * Error categories use real Argentine rates:
  *   Commission 15% | Direct Tax 4.9% | With Tax 15.75%
+ *
+ * Sprint 3: twData can come from any platform (Twitter or Meta).
+ * Meta rows are pre-normalized by readExcelFile → normalizeMeta().
  */
 export const reconcileData = (sfData, twData) => {
   const sfRecords = Array.isArray(sfData) ? sfData : (sfData?.records ?? []);
   const twRecords = Array.isArray(twData) ? twData : (twData?.records ?? []);
+  const platform  = twData?.platform || 'twitter';
   const result    = [];
 
   // Index TW records by all available keys.
@@ -247,6 +317,8 @@ export const reconcileData = (sfData, twData) => {
       manager:       sf['Project Owner'] ?? sf['Commercial Owner'] ?? sf['Responsible'] ?? 'Admin',
       billingEntity: sf['Billing Entity'] ?? '',
       country:       sf['Reporting Country'] ?? sf['Sold-To Country'] ?? '',
+      region:        sf['Division'] ?? sf['Region'] ?? sf['Reporting Country'] ?? '',
+      platform,
       currency:      sfCurrency || twCurrency,
       sfBudget,
       twBilling,

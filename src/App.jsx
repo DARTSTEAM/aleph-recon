@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, googleProvider } from './firebase';
 import { reconcileData, readExcelFile } from './utils/reconciler';
-import { subscribeToItems, saveReconciliationRun, updateItemStatus, resolveItem } from './utils/firestoreService';
+import { subscribeToItems, saveReconciliationRun, updateItemStatus, resolveItem, addComment, appendAuditEntry } from './utils/firestoreService';
 import ReconciliationsView from './views/ReconciliationsView';
 import DataSourcesView from './views/DataSourcesView';
 import CommercialTeamsView from './views/CommercialTeamsView';
@@ -139,6 +139,162 @@ const BentoStat = ({ label, value, sub, icon: Icon }) => (
   </motion.div>
 );
 
+// ─── IO Detail Drawer (Comments + Audit Log) ─────────────────────────────────
+function IODetailDrawer({ item, user, onClose, onUpdate }) {
+  const { t } = useT();
+  const [tab, setTab] = React.useState('comments');
+  const [newComment, setNewComment] = React.useState('');
+  const [posting, setPosting] = React.useState(false);
+
+  if (!item) return null;
+  const comments = item.comments || [];
+  const auditLog = item.auditLog || [];
+
+  const handleAddComment = async () => {
+    const text = newComment.trim();
+    if (!text) return;
+    setPosting(true);
+    const entry = { text, author: user.email };
+    try {
+      await addComment(item.io, entry);
+      // Optimistic local update
+      onUpdate(item.io, { comments: [...comments, { ...entry, timestamp: new Date().toISOString() }] });
+    } catch (_) {
+      // Firestore unavailable — update locally
+      onUpdate(item.io, { comments: [...comments, { ...entry, timestamp: new Date().toISOString() }] });
+    }
+    setNewComment('');
+    setPosting(false);
+  };
+
+  const tabStyle = (active) => ({
+    padding: '8px 18px', borderRadius: '8px', fontSize: '12px', fontWeight: '700',
+    cursor: 'pointer', border: 'none', transition: 'all 0.15s', fontFamily: 'var(--font-brand)',
+    background: active ? 'var(--primary)' : 'transparent',
+    color: active ? 'white' : 'var(--text-muted)'
+  });
+
+  const actionLabel = {
+    follow_up_sent: '📧 Follow-up sent',
+    resolved:       '✅ Resolved',
+    comment_added:  '💬 Comment',
+    status_change:  '🔄 Status changed',
+  };
+
+  return (
+    <motion.div
+      initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+      transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+      style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: '420px',
+        background: 'white', borderLeft: '1px solid var(--border-subtle)',
+        boxShadow: '-12px 0 40px rgba(0,0,0,0.08)', zIndex: 900,
+        display: 'flex', flexDirection: 'column', overflow: 'hidden'
+      }}
+    >
+      {/* Header */}
+      <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+          <div>
+            <div style={{ fontWeight: '800', fontSize: '15px', color: 'var(--primary)' }}>{item.io}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{item.account}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
+            <X size={18} />
+          </button>
+        </div>
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '4px', background: '#F5F6FA', borderRadius: '10px', padding: '4px' }}>
+          <button style={tabStyle(tab === 'comments')} onClick={() => setTab('comments')}>💬 Comments ({comments.length})</button>
+          <button style={tabStyle(tab === 'log')} onClick={() => setTab('log')}>📋 Audit Log ({auditLog.length})</button>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem' }}>
+        {tab === 'comments' && (
+          <>
+            {comments.length === 0 && (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', padding: '2.5rem 0' }}>
+                <div style={{ fontSize: '28px', marginBottom: '8px' }}>💬</div>
+                No comments yet. Be the first.
+              </div>
+            )}
+            {comments.map((c, i) => (
+              <div key={i} style={{ marginBottom: '1rem', padding: '12px 14px', borderRadius: '10px', background: '#FAFAFD', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '10px', fontWeight: '800' }}>
+                      {c.author?.[0]?.toUpperCase() ?? '?'}
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>{c.author}</span>
+                  </div>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                    {new Date(c.timestamp).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: '1.5' }}>{c.text}</div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {tab === 'log' && (
+          <>
+            {auditLog.length === 0 && (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', padding: '2.5rem 0' }}>
+                <div style={{ fontSize: '28px', marginBottom: '8px' }}>📋</div>
+                No activity recorded yet.
+              </div>
+            )}
+            {[...auditLog].reverse().map((entry, i) => (
+              <div key={i} style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)', marginTop: '5px', flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                    {actionLabel[entry.action] ?? entry.action}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{entry.note}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px' }}>
+                    {entry.actor} · {new Date(entry.timestamp).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+
+      {/* Comment Input */}
+      {tab === 'comments' && (
+        <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <textarea
+              value={newComment}
+              onChange={e => setNewComment(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) handleAddComment(); }}
+              placeholder={`Add a note about ${item.io}… (⌘↵ to send)`}
+              style={{
+                flex: 1, padding: '10px 12px', border: '1px solid var(--border-strong)',
+                borderRadius: '8px', fontSize: '13px', outline: 'none', resize: 'none',
+                fontFamily: 'var(--font-brand)', lineHeight: '1.5', minHeight: '64px'
+              }}
+            />
+            <button
+              onClick={handleAddComment}
+              disabled={posting || !newComment.trim()}
+              className="btn-premium btn-solid"
+              style={{ padding: '0 14px', alignSelf: 'flex-end', opacity: newComment.trim() ? 1 : 0.4 }}
+            >
+              {posting ? '…' : 'Post'}
+            </button>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 // --- Main App ---
 function App() {
   const { t, lang, toggleLang } = useT();
@@ -158,6 +314,9 @@ function App() {
   const [saving, setSaving] = useState(false);
   const [statusFilter, setStatusFilter] = useState('All');   // All | Error | Fixing | Matched
   const [sortConfig, setSortConfig] = useState({ key: null, dir: 'asc' }); // sortable columns
+  const [drawerItem, setDrawerItem] = useState(null); // IO open in side drawer
+  const [platformFilter, setPlatformFilter] = useState('All'); // All | twitter | meta
+  const [regionFilter, setRegionFilter] = useState('All');     // All | specific region
 
   // --- Auth listener ---
   useEffect(() => {
@@ -226,7 +385,20 @@ function App() {
     const reconciled = reconcileData(sfData, twData);
     setSaving(true);
     saveReconciliationRun(reconciled)
-      .then(() => setSaving(false))
+      .then(async () => {
+        setSaving(false);
+        // Sprint 2: auto-notify if toggle is on
+        const notifSettings = (() => { try { return JSON.parse(localStorage.getItem('aleph-recon-notifications')) || {}; } catch { return {}; } })();
+        if (notifSettings.rules?.newDiscrepancy) {
+          const errorItems = reconciled.filter(i => i.status === 'Error');
+          if (errorItems.length > 0) {
+            showToast(`Auto-notifying ${errorItems.length} manager(s)…`, 'info');
+            const activeUser = firebaseUser || { email: 'admin@aleph.test' };
+            const result = await sendBulkFollowUpEmails(reconciled, activeUser.email);
+            if (result.success) showToast(t('toast.bulkSent', { n: result.sent }));
+          }
+        }
+      })
       .catch((err) => { console.warn('Firestore write failed:', err); setSaving(false); setItems(reconciled); });
   }, [sfData, twData]);
 
@@ -260,12 +432,20 @@ function App() {
   };
 
   const handleResolve = async (item) => {
+    const activeUser = firebaseUser || { email: 'admin@aleph.test' };
     try {
-      await resolveItem(item.io);
+      await resolveItem(item.io, activeUser.email);
     } catch (err) {
       // Firestore unavailable: update local state
       setItems(prev => prev.map(i => i.io === item.io ? { ...i, status: 'Matched', comment: 'Resolved manually' } : i));
     }
+  };
+
+  // Optimistic local update for drawer mutations (comments, etc.)
+  const handleItemUpdate = (io, patch) => {
+    setItems(prev => prev.map(i => i.io === io ? { ...i, ...patch } : i));
+    // Also update drawerItem if open
+    setDrawerItem(prev => prev?.io === io ? { ...prev, ...patch } : prev);
   };
 
   const user = firebaseUser || (devUser ? { displayName: 'Admin', email: 'admin@aleph.test', photoURL: null } : null);
@@ -303,9 +483,16 @@ function App() {
   // 2. Status filter
   const afterStatus = statusFilter === 'All' ? searched : searched.filter(i => i.status === statusFilter);
 
-  // 3. Sort
+  // 3. Platform filter (Sprint 3)
+  const afterPlatform = platformFilter === 'All' ? afterStatus : afterStatus.filter(i => (i.platform || 'twitter') === platformFilter);
+
+  // 4. Region filter (Sprint 3)
+  const availableRegions = [...new Set(items.map(i => i.region || i.country || '').filter(Boolean))];
+  const afterRegion = regionFilter === 'All' ? afterPlatform : afterPlatform.filter(i => (i.region || i.country || '') === regionFilter);
+
+  // 5. Sort
   const filtered = sortConfig.key
-    ? [...afterStatus].sort((a, b) => {
+    ? [...afterRegion].sort((a, b) => {
         const va = a[sortConfig.key] ?? '';
         const vb = b[sortConfig.key] ?? '';
         const cmp = typeof va === 'number'
@@ -313,7 +500,7 @@ function App() {
           : String(va).localeCompare(String(vb), 'es');
         return sortConfig.dir === 'asc' ? cmp : -cmp;
       })
-    : afterStatus;
+    : afterRegion;
 
   const errorCount = items.filter(i => i.status === 'Error').length;
   const fixingCount = items.filter(i => i.status === 'Fixing').length;
@@ -321,7 +508,19 @@ function App() {
 
 
   return (
-    <div className="dashboard-layout">
+    <div className="dashboard-layout" style={{ position: 'relative' }}>
+
+      {/* IO Detail Drawer */}
+      <AnimatePresence>
+        {drawerItem && (
+          <IODetailDrawer
+            item={drawerItem}
+            user={user}
+            onClose={() => setDrawerItem(null)}
+            onUpdate={handleItemUpdate}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Toast Notification */}
       <AnimatePresence>
@@ -488,29 +687,73 @@ function App() {
             </div>
           </div>
 
-          {/* Status filter pills */}
-          <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', marginRight: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status:</span>
-            {[
-              { s: 'All',     color: 'var(--primary)' },
-              { s: 'Error',   color: '#E53E3E' },
-              { s: 'Fixing',  color: '#D97706' },
-              { s: 'Matched', color: '#16A34A' },
-            ].map(({ s, color }) => {
-              const counts = {
-                All:     items.length,
-                Error:   items.filter(i => i.status === 'Error').length,
-                Fixing:  items.filter(i => i.status === 'Fixing').length,
-                Matched: items.filter(i => i.status === 'Matched').length,
-              };
-              const active = statusFilter === s;
-              return (
-                <button key={s} onClick={() => setStatusFilter(s)}
-                  style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.15s', border: `1px solid ${active ? color : 'var(--border-strong)'}`, background: active ? color : 'transparent', color: active ? 'white' : 'var(--text-secondary)' }}>
-                  {s} ({counts[s]})
-                </button>
-              );
-            })}
+          {/* Filter bar: Status + Platform + Region */}
+          <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+
+            {/* Status */}
+            <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+              <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '2px' }}>Status:</span>
+              {[
+                { s: 'All',     color: 'var(--primary)' },
+                { s: 'Error',   color: '#E53E3E' },
+                { s: 'Fixing',  color: '#D97706' },
+                { s: 'Matched', color: '#16A34A' },
+              ].map(({ s, color }) => {
+                const counts = {
+                  All:     items.length,
+                  Error:   items.filter(i => i.status === 'Error').length,
+                  Fixing:  items.filter(i => i.status === 'Fixing').length,
+                  Matched: items.filter(i => i.status === 'Matched').length,
+                };
+                const active = statusFilter === s;
+                return (
+                  <button key={s} onClick={() => setStatusFilter(s)}
+                    style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.15s', border: `1px solid ${active ? color : 'var(--border-strong)'}`, background: active ? color : 'transparent', color: active ? 'white' : 'var(--text-secondary)' }}>
+                    {s} ({counts[s]})
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ width: '1px', height: '20px', background: 'var(--border-subtle)' }} />
+
+            {/* Platform (Sprint 3) */}
+            <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+              <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '2px' }}>Platform:</span>
+              {[
+                { s: 'All', label: 'All', color: 'var(--primary)' },
+                { s: 'twitter', label: '𝕏 Twitter', color: '#1a1a1a' },
+                { s: 'meta',    label: '🔵 Meta',    color: '#1877F2' },
+              ].map(({ s, label, color }) => {
+                const active = platformFilter === s;
+                return (
+                  <button key={s} onClick={() => setPlatformFilter(s)}
+                    style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.15s', border: `1px solid ${active ? color : 'var(--border-strong)'}`, background: active ? color : 'transparent', color: active ? 'white' : 'var(--text-secondary)' }}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Region (Sprint 3 — only shown when regions exist in data) */}
+            {availableRegions.length > 0 && (
+              <>
+                <div style={{ width: '1px', height: '20px', background: 'var(--border-subtle)' }} />
+                <div style={{ display: 'flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '2px' }}>Region:</span>
+                  <button onClick={() => setRegionFilter('All')}
+                    style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.15s', border: `1px solid ${regionFilter === 'All' ? 'var(--primary)' : 'var(--border-strong)'}`, background: regionFilter === 'All' ? 'var(--primary)' : 'transparent', color: regionFilter === 'All' ? 'white' : 'var(--text-secondary)' }}>
+                    All
+                  </button>
+                  {availableRegions.slice(0, 8).map(r => (
+                    <button key={r} onClick={() => setRegionFilter(r)}
+                      style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.15s', border: `1px solid ${regionFilter === r ? 'var(--primary)' : 'var(--border-strong)'}`, background: regionFilter === r ? 'var(--primary)' : 'transparent', color: regionFilter === r ? 'white' : 'var(--text-secondary)' }}>
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           <table className="data-table" style={{ minWidth: '900px' }}>
@@ -530,7 +773,11 @@ function App() {
               <AnimatePresence>
                 {filtered.map((item) => (
                   <motion.tr key={item.id || item.io} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <td className="io-code">{item.io}</td>
+                    <td className="io-code"
+                      onClick={() => setDrawerItem(item)}
+                      style={{ cursor: 'pointer', color: 'var(--primary)' }}
+                      title="Click to open comments & audit log"
+                    >{item.io}</td>
                     <td>
                       <span style={{ display: 'block', fontWeight: '600', color: 'var(--text-primary)', fontSize: '14px' }}>{item.account}</span>
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>{t('table.managerLabel')}{item.manager}</span>
@@ -556,9 +803,17 @@ function App() {
                       </span>
                     </td>
                     <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {item.comment 
-                        ? t(item.comment, item.commentParams) 
-                        : <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>{t('table.noDiscrepancies')}</span>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{item.comment ? t(item.comment, item.commentParams) : <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>{t('table.noDiscrepancies')}</span>}</span>
+                        {(item.comments?.length > 0) && (
+                          <span
+                            onClick={() => setDrawerItem(item)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '1px 7px', borderRadius: '20px', background: '#EFF6FF', color: 'var(--primary)', fontSize: '10px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}
+                          >
+                            💬 {item.comments.length}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
@@ -572,7 +827,9 @@ function App() {
                             <CheckCircle2 size={12} /> {t('action.resolve')}
                           </button>
                         )}
-                        <button className="btn-premium btn-ghost" style={{ padding: '6px' }}><ExternalLink size={13} /></button>
+                        <button className="btn-premium btn-ghost" style={{ padding: '6px' }} onClick={() => setDrawerItem(item)} title="Comments & audit log">
+                          <ExternalLink size={13} />
+                        </button>
                       </div>
                     </td>
                   </motion.tr>

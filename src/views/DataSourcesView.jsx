@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, CheckCircle2, AlertCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Upload, CheckCircle2, AlertCircle, Search, ChevronLeft, ChevronRight, Layers } from 'lucide-react';
 import { useT } from '../i18n/index.jsx';
 
 const UPLOAD_HISTORY = [
@@ -84,9 +84,23 @@ export default function DataSourcesView() {
 
       {/* ── Upload Zone ── */}
       <div className="bento-card" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.25rem' }}>{t('sources.uploadTitle')}</div>
-        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-          {t('sources.uploadSub')}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>{t('sources.uploadTitle')}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('sources.uploadSub')}</div>
+          </div>
+          {/* Sprint 3: Supported platforms badge */}
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Supported:</span>
+            {[
+              { label: '𝕏 Twitter', color: '#1a1a1a' },
+              { label: '🔵 Meta', color: '#1877F2' },
+            ].map(({ label, color }) => (
+              <span key={label} style={{ padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', border: `1px solid ${color}22`, color, background: `${color}08` }}>
+                {label}
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* Drop zone */}
