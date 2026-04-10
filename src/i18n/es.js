@@ -134,9 +134,11 @@ export const es = {
   // ── Equipos Comerciales ──────────────────────────────────────────────────────
   'teams.portfolioTitle': 'Detalle de Portfolio por Manager',
   'teams.nCleanHidden': '{n} manager(s) sin errores (ocultos)',
-  'teams.portfolioIOs': 'IOs del portfolio — clic para ver detalle',
+  'teams.portfolioIOs': 'Portfolio de IOs (Diferencias)',
   'teams.nOpen': '{n} abiert{s}',
-  'teams.nOpenFixing': '{n} abiertos, {f} en revisión',
+  'teams.nOpenFixing': '{n} abiertas, {f} en revisión',
+  'teams.allMatched': '¡Todos los ítems están conciliados para este manager!',
+  'teams.allMatched.sub': '¡Buen trabajo!',
 
   // ── Notificaciones ────────────────────────────────────────────────────────────
   'notif.alertRules': 'Reglas de Alertas',

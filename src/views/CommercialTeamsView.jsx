@@ -170,7 +170,9 @@ export default function CommercialTeamsView() {
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                           style={{ padding: '1rem 2.5rem', borderTop: '1px solid var(--border-subtle)' }}>
                           <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{t('teams.portfolioIOs')}</div>
-                          {m.portfolio.map(io => (
+                          {m.portfolio
+                            .filter(io => io.status !== 'Matched')
+                            .map(io => (
                             <div key={io.io}
                               onClick={() => setPreviewIO(io)}
                               style={{ display: 'flex', gap: '1.5rem', padding: '10px 12px', borderRadius: '8px', marginBottom: '4px', fontSize: '13px', alignItems: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
@@ -181,11 +183,17 @@ export default function CommercialTeamsView() {
                               <span className={`status-pill status-${io.status.toLowerCase()}`}>
                                 {io.status === 'Matched' ? <CheckCircle2 size={10} /> : io.status === 'Fixing' ? <Clock size={10} /> : <AlertCircle size={10} />}
                                 {io.status}
-                              </span>
+                                </span>
                               {io.diff !== 0 && <span style={{ color: '#EF4444', fontWeight: '700', width: '80px', textAlign: 'right' }}>-${Math.abs(io.diff).toLocaleString()}</span>}
                               <span style={{ color: 'var(--primary)', fontSize: '11px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}><Eye size={12} /> {t('recon.viewIO')}</span>
                             </div>
                           ))}
+                          {m.portfolio.filter(io => io.status !== 'Matched').length === 0 && (
+                            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                              <CheckCircle2 size={32} style={{ display: 'block', margin: '0 auto 10px', color: '#10B981' }} />
+                              {t('teams.allMatched')}
+                            </div>
+                          )}
                         </motion.div>
                       </td>
                     </tr>

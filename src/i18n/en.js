@@ -137,6 +137,8 @@ export const en = {
   'teams.portfolioIOs': 'Portfolio IOs — click to see detail',
   'teams.nOpen': '{n} open',
   'teams.nOpenFixing': '{n} open, {f} fixing',
+  'teams.allMatched': 'All items are fully matched for this manager!',
+  'teams.allMatched.sub': 'Good job!',
 
   // ── Notifications ─────────────────────────────────────────────────────────────
   'notif.alertRules': 'Alert Rules',
