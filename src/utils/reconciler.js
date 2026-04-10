@@ -151,16 +151,35 @@ export const reconcileData = (sfData, twData) => {
   const twRecords = Array.isArray(twData) ? twData : (twData?.records ?? []);
   const result    = [];
 
-  // Index TW records by all available keys
+  // Index TW records by all available keys.
+  // IMPORTANT: the same IO Header can appear in MULTIPLE rows of the Billing Report
+  // (e.g. Promoted Ads + Takeover for the same IO). We must SUM the charges, not overwrite.
   const twMap = new Map();
+
+  const addToMap = (key, record, chargesLocal, chargesUSD) => {
+    if (!key) return;
+    if (twMap.has(key)) {
+      // Accumulate charges for this key
+      const existing = twMap.get(key);
+      existing._totalLocal += chargesLocal;
+      existing._totalUSD   += chargesUSD;
+    } else {
+      // First time seeing this IO — clone the record and add sentinel totals
+      twMap.set(key, { ...record, _totalLocal: chargesLocal, _totalUSD: chargesUSD });
+    }
+  };
+
   twRecords.forEach(r => {
-    const ioHeader   = String(r['IO Header']         ?? r['IO number']     ?? '').trim();
-    const invoiceNum = String(r['Invoice #']          ?? r['Invoice Number']?? '').trim();
+    const ioHeader   = String(r['IO Header']         ?? r['IO number']      ?? '').trim();
+    const invoiceNum = String(r['Invoice #']          ?? r['Invoice Number'] ?? '').trim();
     const sfIOId     = String(r['Salesforce IO ID']   ?? '').trim();
 
-    if (ioHeader)   twMap.set(ioHeader,   r);
-    if (invoiceNum) twMap.set(invoiceNum, r);
-    if (sfIOId)     twMap.set(sfIOId,     r);
+    const chargesLocal = parseFloat(r['Total Charges (in Entered Curr)'] ?? r['Amount In Entered Currency'] ?? 0);
+    const chargesUSD   = parseFloat(r['Total Charges (in USD)']          ?? r['Amount in Usd']              ?? 0);
+
+    addToMap(ioHeader,   r, chargesLocal, chargesUSD);
+    addToMap(invoiceNum, r, chargesLocal, chargesUSD);
+    addToMap(sfIOId,     r, chargesLocal, chargesUSD);
   });
 
   sfRecords.forEach(sf => {
@@ -176,12 +195,10 @@ export const reconcileData = (sfData, twData) => {
       sf['Qualified Sales Quantity'] ?? sf['Revenue'] ?? sf['Bill Net Budget'] ?? 0
     );
 
-    const twChargesLocal = tw
-      ? parseFloat(tw['Total Charges (in Entered Curr)'] ?? tw['Amount In Entered Currency'] ?? 0)
-      : 0;
-    const twChargesUSD = tw
-      ? parseFloat(tw['Total Charges (in USD)'] ?? tw['Amount in Usd'] ?? 0)
-      : 0;
+    // Use the aggregated totals — the map sums across all rows for this IO
+    // (a single IO can appear as multiple lines: Promoted Ads, Takeover, Value Add, etc.)
+    const twChargesLocal = tw ? tw._totalLocal : 0;
+    const twChargesUSD   = tw ? tw._totalUSD   : 0;
 
     const twCurrency = String(tw?.['Entered Currency'] ?? tw?.['Account Curr'] ?? 'ARS').trim();
     const sfCurrency = String(sf['Bill Curr'] ?? sf['Billing Currency'] ?? sf['Account Curr'] ?? '').trim();
@@ -195,14 +212,19 @@ export const reconcileData = (sfData, twData) => {
     let comment  = '';
     let category = '';
 
+    // Tolerance: ignore differences ≤ 1 unit of currency (floating-point rounding noise).
+    // ARS 0.10 on a 4M IO → Matched. ARS 21.909 → Error. Simple and correct.
+    const tolerance = 1.0;
+    const absDiff   = Math.abs(diff);
+
     if (!tw) {
       status   = 'Error';
       category = ERROR_TYPES.DELIVERY;
       comment  = 'recon.ioNotFound';
 
-    } else if (Math.abs(diff) > 0.05) {
+    } else if (absDiff > tolerance) {
       status = 'Error';
-      const ratio = sfBudget > 0 ? Math.abs(diff / sfBudget) : 1;
+      const ratio = sfBudget > 0 ? absDiff / sfBudget : 1;
       const near  = (val, target) => Math.abs(val - target) < 0.015;
 
       if      (near(ratio, 0.15))   category = ERROR_TYPES.COMMISSION; // 15% commission

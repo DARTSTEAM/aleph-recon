@@ -156,6 +156,8 @@ function App() {
   const [files, setFiles] = useState({ sf: null, tw: null });
   const [useFirestore, setUseFirestore] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('All');   // All | Error | Fixing | Matched
+  const [sortConfig, setSortConfig] = useState({ key: null, dir: 'asc' }); // sortable columns
 
   // --- Auth listener ---
   useEffect(() => {
@@ -276,13 +278,42 @@ function App() {
 
   if (!user) return <LoginScreen onLogin={handleLogin} onDevLogin={handleDevLogin} />;
 
-  const filtered = items.filter(i =>
+  const handleSort = (key) => {
+    setSortConfig(prev =>
+      prev.key === key
+        ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: 'asc' }
+    );
+  };
+
+  const SortIcon = ({ col }) => {
+    if (sortConfig.key !== col) return <span style={{ opacity: 0.25, marginLeft: '4px', fontSize: '10px' }}>\u2195</span>;
+    return <span style={{ marginLeft: '4px', color: 'var(--primary)', fontSize: '10px' }}>{sortConfig.dir === 'asc' ? '\u2191' : '\u2193'}</span>;
+  };
+
+  // 1. Text search
+  const searched = items.filter(i =>
     (i.io || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (i.account || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (i.manager || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (i.invoiceNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (i.country || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // 2. Status filter
+  const afterStatus = statusFilter === 'All' ? searched : searched.filter(i => i.status === statusFilter);
+
+  // 3. Sort
+  const filtered = sortConfig.key
+    ? [...afterStatus].sort((a, b) => {
+        const va = a[sortConfig.key] ?? '';
+        const vb = b[sortConfig.key] ?? '';
+        const cmp = typeof va === 'number'
+          ? va - vb
+          : String(va).localeCompare(String(vb), 'es');
+        return sortConfig.dir === 'asc' ? cmp : -cmp;
+      })
+    : afterStatus;
 
   const errorCount = items.filter(i => i.status === 'Error').length;
   const fixingCount = items.filter(i => i.status === 'Fixing').length;
@@ -457,15 +488,40 @@ function App() {
             </div>
           </div>
 
+          {/* Status filter pills */}
+          <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', marginRight: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status:</span>
+            {[
+              { s: 'All',     color: 'var(--primary)' },
+              { s: 'Error',   color: '#E53E3E' },
+              { s: 'Fixing',  color: '#D97706' },
+              { s: 'Matched', color: '#16A34A' },
+            ].map(({ s, color }) => {
+              const counts = {
+                All:     items.length,
+                Error:   items.filter(i => i.status === 'Error').length,
+                Fixing:  items.filter(i => i.status === 'Fixing').length,
+                Matched: items.filter(i => i.status === 'Matched').length,
+              };
+              const active = statusFilter === s;
+              return (
+                <button key={s} onClick={() => setStatusFilter(s)}
+                  style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.15s', border: `1px solid ${active ? color : 'var(--border-strong)'}`, background: active ? color : 'transparent', color: active ? 'white' : 'var(--text-secondary)' }}>
+                  {s} ({counts[s]})
+                </button>
+              );
+            })}
+          </div>
+
           <table className="data-table" style={{ minWidth: '900px' }}>
             <thead>
               <tr>
-                <th>{t('table.io')}</th>
-                <th>{t('table.account')}</th>
-                <th>{t('table.sfBudget')}</th>
-                <th>{t('table.twCost')}</th>
-                <th>{t('table.discrepancy')}</th>
-                <th>{t('table.status')}</th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('io')}>{t('table.io')}<SortIcon col="io" /></th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('account')}>{t('table.account')}<SortIcon col="account" /></th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('sfBudget')}>{t('table.sfBudget')}<SortIcon col="sfBudget" /></th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('twBilling')}>{t('table.twCost')}<SortIcon col="twBilling" /></th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('diff')}>{t('table.discrepancy')}<SortIcon col="diff" /></th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('status')}>{t('table.status')}<SortIcon col="status" /></th>
                 <th>{t('table.resolution')}</th>
                 <th style={{ textAlign: 'center' }}>{t('table.actions')}</th>
               </tr>
