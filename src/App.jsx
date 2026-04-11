@@ -77,29 +77,26 @@ function LoginScreen({ onLogin, onDevLogin }) {
         </button>
 
         {/* Divider */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.5rem' }}>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>{t('auth.testAccessLabel')}</span>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+        {/* Dev Login - hidden in production, use Google Sign In above */}
+        <div style={{ display: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.5rem' }}>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>{t('auth.testAccessLabel')}</span>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+          </div>
+          <form onSubmit={handleDevLogin} style={{ textAlign: 'left' }}>
+            <input type="text" placeholder={t('auth.placeholderUser')} value={creds.user}
+              onChange={e => setCreds(p => ({ ...p, user: e.target.value }))}
+              style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border-strong)', borderRadius: '8px', fontSize: '14px', outline: 'none', marginBottom: '8px', fontFamily: 'var(--font-brand)' }} />
+            <input type="password" placeholder={t('auth.placeholderPass')} value={creds.pass}
+              onChange={e => setCreds(p => ({ ...p, pass: e.target.value }))}
+              style={{ width: '100%', padding: '10px 14px', border: `1px solid ${error ? '#FCA5A5' : 'var(--border-strong)'}`, borderRadius: '8px', fontSize: '14px', outline: 'none', marginBottom: '8px', fontFamily: 'var(--font-brand)' }} />
+            {error && <p style={{ color: '#EF4444', fontSize: '12px', marginBottom: '8px' }}>{error}</p>}
+            <button type="submit" className="btn-premium btn-ghost" style={{ width: '100%', justifyContent: 'center', padding: '10px' }}>
+              {t('auth.loginAdmin')}
+            </button>
+          </form>
         </div>
-
-        {/* Dev Login Form */}
-        <form onSubmit={handleDevLogin} style={{ textAlign: 'left' }}>
-          <input
-            type="text" placeholder={t('auth.placeholderUser')} value={creds.user}
-            onChange={e => setCreds(p => ({ ...p, user: e.target.value }))}
-            style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border-strong)', borderRadius: '8px', fontSize: '14px', outline: 'none', marginBottom: '8px', fontFamily: 'var(--font-brand)' }}
-          />
-          <input
-            type="password" placeholder={t('auth.placeholderPass')} value={creds.pass}
-            onChange={e => setCreds(p => ({ ...p, pass: e.target.value }))}
-            style={{ width: '100%', padding: '10px 14px', border: `1px solid ${error ? '#FCA5A5' : 'var(--border-strong)'}`, borderRadius: '8px', fontSize: '14px', outline: 'none', marginBottom: '8px', fontFamily: 'var(--font-brand)' }}
-          />
-          {error && <p style={{ color: '#EF4444', fontSize: '12px', marginBottom: '8px' }}>{error}</p>}
-          <button type="submit" className="btn-premium btn-ghost" style={{ width: '100%', justifyContent: 'center', padding: '10px' }}>
-            {t('auth.loginAdmin')}
-          </button>
-        </form>
 
         <p style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '1.5rem' }}>
           {t('auth.restrictedProp')}
@@ -762,8 +759,10 @@ function App() {
             )}
           </div>
 
+          {/* Scrollable table container — fixed height, scrollable rows */}
+          <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '62vh' }}>
           <table className="data-table" style={{ minWidth: '900px' }}>
-            <thead>
+            <thead style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bg-card, white)' }}>
               <tr>
                 <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('io')}>{t('table.io')}<SortIcon col="io" /></th>
                 <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('account')}>{t('table.account')}<SortIcon col="account" /></th>
@@ -843,6 +842,7 @@ function App() {
               </AnimatePresence>
             </tbody>
           </table>
+          </div>{/* end scrollable table container */}
         </div>
         </> }
       </main>
