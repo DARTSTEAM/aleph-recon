@@ -43,7 +43,7 @@ jobs:
       - name: Build Frontend Docker image
         run: |
           docker build \
-            --build-arg VITE_API_URL=https://aleph-recon-api-966549276703.us-central1.run.app \
+            --build-arg VITE_API_URL=https://aleph-recon-api-gvxb4rjzvq-uc.a.run.app \
             --build-arg VITE_API_KEY=${{ secrets.ALEPH_API_KEY }} \
             -t $FRONTEND_IMAGE:${{ github.sha }} \
             -t $FRONTEND_IMAGE:latest \
