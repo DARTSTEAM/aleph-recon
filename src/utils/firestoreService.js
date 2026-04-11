@@ -41,18 +41,35 @@ export const subscribeToItems = (callback) => {
 /**
  * Batch-write a full reconciliation dataset to Firestore.
  * Called after file upload + reconciliation run.
+ *
+ * Uses MERGE semantics: existing comments, auditLog, and manual status
+ * overrides are preserved. Financial fields (sfBudget, twBilling, diff,
+ * category) are always overwritten with the latest run's values.
  */
 export const saveReconciliationRun = async (items, runLabel = "Q1-2026") => {
+  // Get all existing docs first so we can preserve human-annotated fields
+  const existingSnap = await getDocs(collection(db, RECON_COLLECTION));
+  const existing = {};
+  existingSnap.forEach(d => { existing[d.id] = d.data(); });
+
   const batch = writeBatch(db);
   items.forEach((item) => {
-    const ref = doc(collection(db, RECON_COLLECTION), item.io);
+    const ref  = doc(collection(db, RECON_COLLECTION), item.io);
+    const prev = existing[item.io] || {};
+
     batch.set(ref, {
+      // Always update financial / reconciliation data
       ...item,
       runLabel,
-      comments: [],
-      auditLog: [],
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      updatedAt:  serverTimestamp(),
+      // Preserve human-annotated fields from previous runs
+      comments:   prev.comments  ?? [],
+      auditLog:   prev.auditLog  ?? [],
+      // Only keep a manual status override if it was set to 'Fixing' or 'Matched'
+      // and the new run still sees a discrepancy (don't override Error→Matched)
+      status:     (prev.status === 'Fixing' && item.status !== 'Matched') ? 'Fixing'
+                : item.status,
+      createdAt:  prev.createdAt ?? serverTimestamp(),
     });
   });
   await batch.commit();
