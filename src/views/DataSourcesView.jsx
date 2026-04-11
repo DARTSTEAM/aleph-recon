@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, CheckCircle2, AlertCircle, Search, ChevronLeft, ChevronRight, RefreshCw, X } from 'lucide-react';
+import { Upload, CheckCircle2, AlertCircle, Search, ChevronLeft, ChevronRight, RefreshCw, X, FileSpreadsheet } from 'lucide-react';
 import { useT } from '../i18n/index.jsx';
-import { readExcelFile, reconcileData } from '../utils/reconciler.js';
+import { readExcelFile, reconcileData, readCriteoReconc } from '../utils/reconciler.js';
 import { saveReconciliationRun } from '../utils/firestoreService.js';
+import * as XLSX from 'xlsx';
 
 // ─── Static upload history (cosmetic) ─────────────────────────────────────────
 const UPLOAD_HISTORY = [
@@ -21,7 +22,9 @@ const PAGE_SIZE = 4;
 function detectFileType(filename = '') {
   const lower = filename.toLowerCase();
   if (lower.includes('sf_') || lower.includes('salesforce') || lower.includes('export')) return 'Salesforce';
-  // Criteo before generic 'billing' / 'reconc' checks
+  // Criteo Reconc file (single-file workflow) detected before billing check
+  if ((lower.includes('reconcilia') || lower.includes('reconc')) && lower.includes('criteo')) return 'Criteo Reconc';
+  // Criteo Billing Report (two-file workflow)
   if (lower.includes('criteo') || lower.startsWith('billingreport_aleph')) return 'Criteo Billing';
   if (lower.includes('reconc') || lower.includes('reconcilia')) return 'Salesforce';
   if (lower.includes('ims') || lower.includes('billing') || lower.includes('twitter') || lower.includes(' x ')) return 'Twitter Billing';
@@ -38,10 +41,11 @@ const PLATFORM_COLORS = {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function DataSourcesView() {
   const { t } = useT();
-  const [sfFile, setSfFile]           = useState(null);
-  const [billingFile, setBillingFile] = useState(null);   // Twitter | Criteo | Meta
-  const [billingType, setBillingType] = useState(null);   // detected platform
-  const [unknownFile, setUnknownFile] = useState(null);
+  const [sfFile, setSfFile]              = useState(null);
+  const [billingFile, setBillingFile]    = useState(null);
+  const [billingType, setBillingType]    = useState(null);
+  const [criteoFile, setCriteoFile]      = useState(null);  // single-file Criteo reconc
+  const [unknownFile, setUnknownFile]    = useState(null);
   const [dragging, setDragging]       = useState(false);
   const [processing, setProcessing]   = useState(false);
   const [result, setResult]           = useState(null);   // { matched, errors, saved }
@@ -58,9 +62,15 @@ export default function DataSourcesView() {
       const type = detectFileType(file.name);
       if (type === 'Salesforce') {
         setSfFile(file);
+      } else if (type === 'Criteo Reconc') {
+        // Single-file Criteo workflow — no SF needed
+        setCriteoFile(file);
+        setSfFile(null);
+        setBillingFile(null);
       } else if (type === 'Twitter Billing' || type === 'Criteo Billing' || type === 'Meta Billing') {
         setBillingFile(file);
         setBillingType(type);
+        setCriteoFile(null);
       } else {
         setUnknownFile(file);
       }
@@ -74,35 +84,44 @@ export default function DataSourcesView() {
   const handleClassify = (type) => {
     if (type === 'Salesforce') {
       setSfFile(unknownFile);
+    } else if (type === 'Criteo Reconc') {
+      setCriteoFile(unknownFile);
+      setSfFile(null); setBillingFile(null);
     } else {
       setBillingFile(unknownFile);
       setBillingType(type);
+      setCriteoFile(null);
     }
     setUnknownFile(null);
   };
 
   // ─── Real reconciliation ─────────────────────────────────────────────────────
   const handleProcess = async () => {
-    if (!sfFile || !billingFile) return;
+    if (!canRun) return;
     setProcessing(true);
     setError(null);
     setResult(null);
     try {
-      // Read both files
-      const sfData      = await readExcelFile(sfFile, 'sf');
-      const billingData = await readExcelFile(billingFile, 'auto');  // auto-detects twitter|criteo|meta
+      let reconciled;
 
-      // Reconcile
-      const reconciled = reconcileData(sfData, billingData);
+      if (criteoFile) {
+        // ── Single-file Criteo workflow ──────────────────────────────────────
+        const { items } = await readCriteoReconc(criteoFile);
+        reconciled = items;
+      } else {
+        // ── Two-file workflow (Twitter / Meta / Criteo Billing) ──────────────
+        const sfData      = await readExcelFile(sfFile, 'sf');
+        const billingData = await readExcelFile(billingFile, 'auto');
+        reconciled = reconcileData(sfData, billingData);
+      }
 
-      // Save to Firestore
       await saveReconciliationRun(reconciled, 'Latest');
 
       setResult({
-        total:   reconciled.length,
-        matched: reconciled.filter(i => i.status === 'Matched').length,
-        errors:  reconciled.filter(i => i.status === 'Error').length,
-        platform: billingData.platform || 'unknown',
+        total:    reconciled.length,
+        matched:  reconciled.filter(i => i.status === 'Matched').length,
+        errors:   reconciled.filter(i => i.status === 'Error').length,
+        platform: criteoFile ? 'criteo' : (billingFile ? billingType : 'unknown'),
       });
     } catch (err) {
       console.error(err);
@@ -120,7 +139,8 @@ export default function DataSourcesView() {
   const totalPages  = Math.ceil(filteredHistory.length / PAGE_SIZE);
   const pagedHistory = filteredHistory.slice((historyPage - 1) * PAGE_SIZE, historyPage * PAGE_SIZE);
 
-  const canRun = sfFile && billingFile && !processing;
+  // Can run: either Criteo single-file OR both SF + billing
+  const canRun = (criteoFile || (sfFile && billingFile)) && !processing;
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -164,7 +184,9 @@ export default function DataSourcesView() {
             {t('sources.dropZoneTitle')}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Drop both files together, or click to select. Auto-detects Twitter, Criteo and Meta billing files.
+            Drop files here or click to select.
+            <strong> Criteo:</strong> drop the <em>Reconciliación Criteo</em> file alone (no SF needed) ·
+            <strong> Twitter/Meta:</strong> drop both SF Export + Billing File together.
           </div>
         </div>
 
@@ -184,6 +206,9 @@ export default function DataSourcesView() {
                 <button className="btn-premium btn-ghost" style={{ fontSize: '12px' }} onClick={() => handleClassify('Twitter Billing')}>
                   𝕏 {t('sources.isTW')}
                 </button>
+                <button className="btn-premium btn-ghost" style={{ fontSize: '12px', borderColor: '#F9690033', color: '#F96900' }} onClick={() => handleClassify('Criteo Reconc')}>
+                  🟠 Criteo Reconc <span style={{ fontSize: '10px', opacity: 0.7 }}>(single file)</span>
+                </button>
                 <button className="btn-premium btn-ghost" style={{ fontSize: '12px', borderColor: '#F9690033', color: '#F96900' }} onClick={() => handleClassify('Criteo Billing')}>
                   🟠 Criteo Billing
                 </button>
@@ -200,43 +225,60 @@ export default function DataSourcesView() {
 
         {/* Detected files — 2 slots */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-          {/* SF slot */}
-          <label style={{ padding: '1rem', borderRadius: '10px', cursor: 'pointer',
-            background: sfFile ? '#EFF6FF' : '#F8F9FF',
-            border: `1px solid ${sfFile ? '#1D4ED833' : 'var(--border-subtle)'}` }}>
-            <input type="file" hidden accept=".xlsx,.csv" onChange={e => e.target.files[0] && processFiles([e.target.files[0]])} />
-            <div style={{ fontSize: '11px', fontWeight: '700', color: '#1D4ED8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
-              {t('sources.sfExport')}
-            </div>
-            {sfFile ? (
+          {/* Criteo single-file slot */}
+          {criteoFile ? (
+            <label style={{ padding: '1rem', borderRadius: '10px', cursor: 'pointer', gridColumn: '1 / -1',
+              background: '#FFF7ED', border: '1px solid #F9690033' }}>
+              <input type="file" hidden accept=".xlsx,.csv" onChange={e => e.target.files[0] && processFiles([e.target.files[0]])} />
+              <div style={{ fontSize: '11px', fontWeight: '700', color: '#F96900', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                🟠 Criteo Reconc File <span style={{ textTransform: 'none', fontWeight: '500', opacity: 0.7, fontSize: '10px' }}>— no Salesforce file needed</span>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <CheckCircle2 size={15} style={{ color: '#10B981', flexShrink: 0 }} />
-                <span style={{ fontSize: '13px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sfFile.name}</span>
+                <span style={{ fontSize: '13px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{criteoFile.name}</span>
               </div>
-            ) : (
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('sources.waiting')}</div>
-            )}
-          </label>
+            </label>
+          ) : (
+            <>
+              {/* SF slot */}
+              <label style={{ padding: '1rem', borderRadius: '10px', cursor: 'pointer',
+                background: sfFile ? '#EFF6FF' : '#F8F9FF',
+                border: `1px solid ${sfFile ? '#1D4ED833' : 'var(--border-subtle)'}` }}>
+                <input type="file" hidden accept=".xlsx,.csv" onChange={e => e.target.files[0] && processFiles([e.target.files[0]])} />
+                <div style={{ fontSize: '11px', fontWeight: '700', color: '#1D4ED8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                  {t('sources.sfExport')}
+                </div>
+                {sfFile ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle2 size={15} style={{ color: '#10B981', flexShrink: 0 }} />
+                    <span style={{ fontSize: '13px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sfFile.name}</span>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('sources.waiting')}</div>
+                )}
+              </label>
 
-          {/* Billing slot — platform-agnostic */}
-          <label style={{ padding: '1rem', borderRadius: '10px', cursor: 'pointer',
-            background: billingFile ? '#F5F3FF' : '#F8F9FF',
-            border: `1px solid ${billingFile ? '#7C3AED33' : 'var(--border-subtle)'}` }}>
-            <input type="file" hidden accept=".xlsx,.csv" onChange={e => e.target.files[0] && processFiles([e.target.files[0]])} />
-            <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px',
-              color: billingFile ? (PLATFORM_COLORS[billingType] || '#7C3AED') : '#7C3AED' }}>
-              {billingType || 'Billing File'}&nbsp;
-              {billingType && <span style={{ textTransform: 'none', fontWeight: '500', fontSize: '10px', opacity: 0.7 }}>auto-detected</span>}
-            </div>
-            {billingFile ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <CheckCircle2 size={15} style={{ color: '#10B981', flexShrink: 0 }} />
-                <span style={{ fontSize: '13px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{billingFile.name}</span>
-              </div>
-            ) : (
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Twitter/X · Criteo · Meta</div>
-            )}
-          </label>
+              {/* Billing slot — platform-agnostic */}
+              <label style={{ padding: '1rem', borderRadius: '10px', cursor: 'pointer',
+                background: billingFile ? '#F5F3FF' : '#F8F9FF',
+                border: `1px solid ${billingFile ? '#7C3AED33' : 'var(--border-subtle)'}` }}>
+                <input type="file" hidden accept=".xlsx,.csv" onChange={e => e.target.files[0] && processFiles([e.target.files[0]])} />
+                <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px',
+                  color: billingFile ? (PLATFORM_COLORS[billingType] || '#7C3AED') : '#7C3AED' }}>
+                  {billingType || 'Billing File'}&nbsp;
+                  {billingType && <span style={{ textTransform: 'none', fontWeight: '500', fontSize: '10px', opacity: 0.7 }}>auto-detected</span>}
+                </div>
+                {billingFile ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle2 size={15} style={{ color: '#10B981', flexShrink: 0 }} />
+                    <span style={{ fontSize: '13px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{billingFile.name}</span>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Twitter/X · Criteo Billing · Meta</div>
+                )}
+              </label>
+            </>
+          )}
         </div>
 
         {/* Run button + results */}

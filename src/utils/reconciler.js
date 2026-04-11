@@ -363,3 +363,118 @@ export const reconcileData = (sfData, twData) => {
 
   return result;
 };
+
+// ─── Public: readCriteoReconc ─────────────────────────────────────────────────
+
+/**
+ * Detect whether an Excel File is Aleph's Criteo Reconciliation file
+ * (the one that already has the SF vs Criteo comparison in the Summary sheet).
+ * Key signal: has both a "Summary" sheet and either "Criteo Report" or "Salesforce".
+ */
+export const isCriteoReconc = (workbook) => {
+  const names = workbook.SheetNames.map(n => n.toLowerCase());
+  return names.includes('summary') && (
+    names.some(n => n.includes('criteo')) ||
+    names.includes('salesforce')
+  );
+};
+
+/**
+ * Read Aleph's Criteo Reconciliation file and return items in the standard format.
+ *
+ * Summary sheet columns (row 3 = header row):
+ *   concatenate | Advertiser ID | Advertiser name | Currency |
+ *   Suma de Net amount | Net amount (USD) | Status | Cost |
+ *   Purchase Currency | Revenue | Billing currency | Dif Report - SF |
+ *   DIF USD | Comments | COGS USD | REV USD | MG
+ *
+ * Matching logic:
+ *   Dif Report - SF == 0 (abs ≤ 1)  →  Matched
+ *   otherwise                        →  Error
+ */
+export const readCriteoReconc = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const data     = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sumSheet = workbook.Sheets['Summary'];
+
+        if (!sumSheet) {
+          reject(new Error('No "Summary" sheet found in Criteo reconciliation file'));
+          return;
+        }
+
+        const rawRows = XLSX.utils.sheet_to_json(sumSheet, { header: 1, defval: '' });
+
+        // Header is on row index 2 (row 3 in Excel)
+        const headerRowIdx = rawRows.findIndex(row =>
+          row.some(cell => String(cell).trim() === 'Advertiser ID')
+        );
+        if (headerRowIdx === -1) {
+          reject(new Error('Could not find header row in Summary sheet'));
+          return;
+        }
+
+        const headers = rawRows[headerRowIdx].map(h => String(h).trim());
+        const items   = [];
+
+        for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
+          const row = rawRows[i];
+          if (!row || row.every(v => v === '' || v == null)) continue;
+
+          const obj = {};
+          headers.forEach((h, idx) => { if (h) obj[h] = row[idx] ?? ''; });
+
+          // Skip total/summary rows
+          const advId = String(obj['Advertiser ID'] ?? '').trim();
+          if (!advId || advId.toLowerCase().includes('total')) continue;
+
+          const sfBudget  = parseFloat(obj['Cost']             ?? obj['Revenue']         ?? 0);
+          const twBilling = parseFloat(obj['Net amount (USD)'] ?? obj['Suma de Net amount'] ?? 0);
+          const diff      = parseFloat(obj['Dif Report - SF']  ?? obj['DIF USD']          ?? 0);
+          const currency  = String(obj['Currency'] ?? obj['Billing currency'] ?? 'USD').trim();
+          const comment   = String(obj['Comments'] ?? '').trim();
+          const absDiff   = Math.abs(diff);
+
+          const status = absDiff <= 1.0 ? 'Matched' : 'Error';
+
+          items.push({
+            id:            Math.random().toString(36).substr(2, 9),
+            io:            advId,
+            invoiceNumber: '',
+            account:       String(obj['Advertiser name'] ?? '').trim(),
+            manager:       'Admin',          // Criteo reconc doesn't store manager
+            billingEntity: '',
+            country:       '',
+            region:        '',
+            platform:      'criteo',
+            currency,
+            sfBudget,
+            twBilling,
+            twBillingUSD:  twBilling,
+            diff:          sfBudget - twBilling,
+            status,
+            category:      status === 'Error' ? 'recon.category.budget' : '',
+            comment:       status === 'Error' ? 'recon.discrepancyMsg' : '',
+            lastFollowUp:  null,
+            commentParams: {
+              diff: `${currency} ${Math.abs(sfBudget - twBilling).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            },
+            _criteoStatus: String(obj['Status'] ?? '').trim(),    // "Under Review" etc.
+            _criteoComment: comment,                               // "OK" / "Less rev/cogs..."
+          });
+        }
+
+        resolve({ items, platform: 'criteo', sheetName: 'Summary', total: items.length });
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+};
