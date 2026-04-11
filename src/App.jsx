@@ -368,13 +368,15 @@ function App() {
   const handleFileUpload = async (type, file) => {
     setFiles(prev => ({ ...prev, [type]: file }));
     try {
-      const fileType = type === 'sf' ? 'sf' : 'twitter';
+      // 'sf' is always Salesforce. Billing files (tw slot) are auto-detected
+      // so Criteo, Meta, and Twitter/X files all work without manual selection.
+      const fileType = type === 'sf' ? 'sf' : 'auto';
       const data = await readExcelFile(file, fileType);
       if (type === 'sf') setSfData(data);
       if (type === 'tw') setTwData(data);
-      // Show which sheet was loaded
       if (data.sheetName) {
-        showToast(`✓ ${file.name} — sheet "${data.sheetName}" (${data.records?.length ?? 0} rows)`);
+        const platformLabel = data.platform ? ` [${data.platform}]` : '';
+        showToast(`✓ ${file.name}${platformLabel} — "${data.sheetName}" (${data.records?.length ?? 0} rows)`);
       }
     } catch (err) { alert(t('toast.errorReadingFile')); }
   };
@@ -624,25 +626,28 @@ function App() {
         </section>
 
         {/* File Upload Row */}
-        <div className="bento-card" style={{ marginBottom: '2rem', padding: '1.25rem' }}>
-          <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <DownloadCloud size={16} style={{ color: 'var(--primary)' }} /> {t('nav.dataSources')}
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            {[{ key: 'sf', label: t('sources.sfExport'), color: '#1D4ED8' }, { key: 'tw', label: t('sources.twBilling'), color: '#6D28D9' }].map(({ key, label, color }) => (
-              <label key={key} className="dropzone-inner" style={{ cursor: 'pointer', display: 'block' }}>
-                <input type="file" hidden accept=".xlsx,.csv" onChange={(e) => e.target.files[0] && handleFileUpload(key, e.target.files[0])} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <FileSpreadsheet size={16} style={{ color }} />
-                  <div>
-                    <div style={{ fontWeight: '600', fontSize: '13px', color }}>{label}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{files[key] ? `✓ ${files[key].name}` : t('sources.waiting')}</div>
+          <div className="bento-card" style={{ marginBottom: '2rem', padding: '1.25rem' }}>
+            <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <DownloadCloud size={16} style={{ color: 'var(--primary)' }} /> {t('nav.dataSources')}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              {[
+                { key: 'sf', label: t('sources.sfExport'),  sub: 'Salesforce Export / Reconc file', color: '#1D4ED8' },
+                { key: 'tw', label: 'Billing File',          sub: 'Twitter/X · Criteo · Meta',       color: '#6D28D9' },
+              ].map(({ key, label, sub, color }) => (
+                <label key={key} className="dropzone-inner" style={{ cursor: 'pointer', display: 'block' }}>
+                  <input type="file" hidden accept=".xlsx,.csv" onChange={(e) => e.target.files[0] && handleFileUpload(key, e.target.files[0])} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <FileSpreadsheet size={16} style={{ color }} />
+                    <div>
+                      <div style={{ fontWeight: '600', fontSize: '13px', color }}>{label}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '1px' }}>{files[key] ? `✓ ${files[key].name}` : sub}</div>
+                    </div>
                   </div>
-                </div>
-              </label>
-            ))}
+                </label>
+              ))}
+            </div>
           </div>
-        </div>
 
         {/* Reconciliation Table */}
         <div className="data-table-wrapper" style={{ overflowX: 'auto' }}>
@@ -721,9 +726,10 @@ function App() {
             <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
               <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '2px' }}>Platform:</span>
               {[
-                { s: 'All', label: 'All', color: 'var(--primary)' },
-                { s: 'twitter', label: '𝕏 Twitter', color: '#1a1a1a' },
-                { s: 'meta',    label: '🔵 Meta',    color: '#1877F2' },
+                { s: 'All',     label: 'All',        color: 'var(--primary)' },
+                { s: 'twitter', label: '𝕏 Twitter',  color: '#1a1a1a' },
+                { s: 'criteo',  label: '🟠 Criteo',  color: '#F96900' },
+                { s: 'meta',    label: '🔵 Meta',     color: '#1877F2' },
               ].map(({ s, label, color }) => {
                 const active = platformFilter === s;
                 return (

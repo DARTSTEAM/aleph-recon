@@ -137,7 +137,7 @@ function findBestSheet(workbook, fileType) {
 
 // ─── Header Row Detection ─────────────────────────────────────────────────────
 
-const SF_SIGNALS = ['PPO ID', 'Division', 'Billing Country', 'Reporting Country', 'Company To Invoice Legal Name'];
+const SF_SIGNALS = ['PPO ID', 'Publisher PO ID', 'Division', 'Billing Country', 'Reporting Country', 'Company To Invoice Legal Name'];
 const TW_SIGNALS = ['IO Header', 'Invoice #', 'Billing Party', 'Entered Currency', 'Total Charges (in USD)'];
 const CRITEO_HDR_SIG = ['Off.Doc.Number', 'Advertiser ID', 'Net amount', 'Criteo company'];
 const ALL_SIGNALS    = [...SF_SIGNALS, ...TW_SIGNALS, ...CRITEO_HDR_SIG, 'Publisher POID', 'IO number', 'Account Name'];
