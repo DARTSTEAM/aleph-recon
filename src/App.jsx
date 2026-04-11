@@ -540,7 +540,7 @@ function App() {
       </AnimatePresence>
 
       {/* Sidebar */}
-      <aside style={{ width: '260px', minHeight: '100vh', padding: '2rem 1.25rem', backgroundColor: 'white', borderRight: '1px solid var(--border-subtle)', position: 'sticky', top: 0, display: 'flex', flexDirection: 'column' }}>
+      <aside style={{ width: '220px', minHeight: '100vh', padding: '1.5rem 1rem', backgroundColor: 'white', borderRight: '1px solid var(--border-subtle)', position: 'sticky', top: 0, display: 'flex', flexDirection: 'column' }}>
         <div style={{ marginBottom: '2.5rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ width: '30px', height: '30px', background: 'var(--primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
             <Layers size={16} />
@@ -616,7 +616,7 @@ function App() {
         {activeView === 'dashboard' && <>
         {/* KPI Bento Grid */}
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem', marginBottom: '2.5rem' }}>
-          <BentoStat label={t('kpi.settledVolume')} value={`$${(totalVolume / 1000).toFixed(0)}K`} sub={t('kpi.settledVolume.sub')} icon={CreditCard} />
+          <BentoStat label={t('kpi.settledVolume')} value={`$${(totalVolume / 1_000_000).toFixed(1)}M`} sub={t('kpi.settledVolume.sub')} icon={CreditCard} />
           <BentoStat label={t('kpi.unresolvedErrors')} value={errorCount} sub={t('kpi.unresolvedErrors.sub', { n: fixingCount })} icon={AlertCircle} />
           <BentoStat label={t('kpi.followUpsSent')} value={fixingCount} sub={t('kpi.followUpsSent.sub')} icon={Mail} />
           <BentoStat label={t('kpi.matchRate')} value={`${items.length > 0 ? ((items.filter(i => i.status === 'Matched').length / items.length) * 100).toFixed(0) : 0}%`} sub={t('kpi.matchRate.sub')} icon={ShieldCheck} />
@@ -760,8 +760,8 @@ function App() {
           </div>
 
           {/* Scrollable table container — fixed height, scrollable rows */}
-          <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '62vh' }}>
-          <table className="data-table" style={{ minWidth: '900px' }}>
+          <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '58vh' }}>
+          <table className="data-table" style={{ minWidth: '820px' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bg-card, white)' }}>
               <tr>
                 <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('io')}>{t('table.io')}<SortIcon col="io" /></th>
