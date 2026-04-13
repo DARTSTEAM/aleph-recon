@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "hike-agentic-playground",
+    "site": "aleph-automation",
     "public": "dist",
     "ignore": [
       "firebase.json",
