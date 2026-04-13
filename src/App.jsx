@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
   CreditCard, Upload, Search, Activity, Mail, AlertCircle, FileText,
   RefreshCw, PlusCircle, CheckCircle2, XCircle, Clock, ShieldCheck,
   TrendingDown, Layers, LayoutDashboard, Users, Settings, HelpCircle,
-  Bell, Database, LogOut, FileSpreadsheet, DownloadCloud, ExternalLink, X
+  Bell, Database, LogOut, FileSpreadsheet, DownloadCloud, ExternalLink, X, AtSign, Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, googleProvider } from './firebase';
 import { reconcileData, readExcelFile } from './utils/reconciler';
-import { subscribeToItems, saveReconciliationRun, updateItemStatus, resolveItem, addComment, appendAuditEntry } from './utils/firestoreService';
+import { subscribeToItems, saveReconciliationRun, updateItemStatus, resolveItem, addComment, appendAuditEntry, subscribeToNotifications, createNotification, markNotificationRead, markAllRead, subscribeToManagers } from './utils/firestoreService';
 import ReconciliationsView from './views/ReconciliationsView';
 import DataSourcesView from './views/DataSourcesView';
 import CommercialTeamsView from './views/CommercialTeamsView';
@@ -62,6 +62,178 @@ const MOCK_RECON_ITEMS = [
   { id: '5', io: 'TW-10573626', account: 'Coca-Cola CL', manager: 'Mariana Tunno', sfBudget: 22000, twBilling: 22000, diff: 0, status: 'Matched', category: 'recon.category.budget' },
   { id: '6', io: 'TW-10573729', account: 'Unilever AR', manager: 'Silvia Rodriguez', sfBudget: 5600, twBilling: 7200, diff: -1600, status: 'Error', category: 'recon.category.budget', comment: 'recon.ioNotFound' },
 ];
+
+// ─── MentionTextarea: @mention autocomplete ───────────────────────────────────
+function MentionTextarea({ value, onChange, onPost, posting, placeholder, managers = [], user, io }) {
+  const [mention, setMention]       = React.useState(null); // { query, start }
+  const [menuIdx, setMenuIdx]       = React.useState(0);
+  const taRef = useRef(null);
+
+  const filtered = useMemo(() => {
+    if (!mention) return [];
+    const q = mention.query.toLowerCase();
+    return managers.filter(m =>
+      m.name?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q)
+    ).slice(0, 6);
+  }, [mention, managers]);
+
+  const detect = (text, pos) => {
+    const slice = text.slice(0, pos);
+    const at = slice.lastIndexOf('@');
+    if (at === -1) { setMention(null); return; }
+    const word = slice.slice(at + 1);
+    if (/\s/.test(word)) { setMention(null); return; }
+    setMention({ query: word, start: at });
+    setMenuIdx(0);
+  };
+
+  const insertMention = (manager) => {
+    const ta = taRef.current;
+    const pos = ta.selectionStart;
+    const before = value.slice(0, mention.start);
+    const after  = value.slice(pos);
+    const inserted = `@${manager.name} `;
+    onChange(before + inserted + after);
+    setMention(null);
+    // fire notification asynchronously
+    if (user && manager.email && manager.email !== user.email) {
+      createNotification(manager.email, {
+        type: 'mention',
+        title: `Te mencionaron en ${io}`,
+        body: `${user.email} te mencionó en un comentario`,
+        io,
+        from: user.email,
+      }).catch(() => {});
+    }
+    setTimeout(() => { ta.focus(); }, 0);
+  };
+
+  const onKeyDown = (e) => {
+    if (mention && filtered.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setMenuIdx(i => Math.min(i + 1, filtered.length - 1)); return; }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); setMenuIdx(i => Math.max(i - 1, 0)); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertMention(filtered[menuIdx]); return; }
+      if (e.key === 'Escape')    { setMention(null); return; }
+    }
+    if (e.key === 'Enter' && e.metaKey) { onPost(); }
+  };
+
+  return (
+    <div style={{ position: 'relative', flex: 1 }}>
+      {/* Mention dropdown */}
+      {mention && filtered.length > 0 && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: 0, zIndex: 999, background: 'white',
+          border: '1px solid var(--border-strong)', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          overflow: 'hidden', minWidth: '220px', marginBottom: '4px'
+        }}>
+          <div style={{ padding: '6px 10px 4px', fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <AtSign size={10} style={{ marginRight: '4px' }} />Mention someone
+          </div>
+          {filtered.map((m, i) => (
+            <div key={m.id} onMouseDown={() => insertMention(m)}
+              style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
+                background: i === menuIdx ? '#F0F3FF' : 'transparent',
+                borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: '800', flexShrink: 0 }}>
+                {m.name?.[0]?.toUpperCase() ?? '?'}
+              </div>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>{m.name}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{m.email}</div>
+              </div>
+            </div>
+          ))}
+          {managers.length === 0 && (
+            <div style={{ padding: '10px 12px', fontSize: '12px', color: 'var(--text-muted)' }}>No managers in directory yet</div>
+          )}
+        </div>
+      )}
+      <textarea
+        ref={taRef}
+        value={value}
+        onChange={e => { onChange(e.target.value); detect(e.target.value, e.target.selectionStart); }}
+        onKeyDown={onKeyDown}
+        onSelectCapture={e => mention && detect(e.target.value, e.target.selectionStart)}
+        placeholder={placeholder}
+        style={{
+          width: '100%', padding: '10px 12px', border: '1px solid var(--border-strong)',
+          borderRadius: '8px', fontSize: '13px', outline: 'none', resize: 'none',
+          fontFamily: 'var(--font-brand)', lineHeight: '1.5', minHeight: '64px', boxSizing: 'border-box'
+        }}
+      />
+    </div>
+  );
+}
+
+// ─── NotificationPanel: bell icon + dropdown inbox ───────────────────────────
+function NotificationPanel({ notifications, userEmail, onMarkRead, onMarkAllRead, onClickNotif }) {
+  const [open, setOpen] = React.useState(false);
+  const unread = notifications.filter(n => !n.read).length;
+  const ref = useRef(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const typeIcon = { mention: '💬', file_uploaded: '📂', status_change: '🔄', follow_up: '📧' };
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button onClick={() => { setOpen(o => !o); if (!open && unread > 0) onMarkAllRead(); }}
+        style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '8px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+        <Bell size={18} />
+        {unread > 0 && (
+          <span style={{ position: 'absolute', top: '0px', right: '0px', background: '#EF4444', color: 'white',
+            borderRadius: '50%', width: '16px', height: '16px', fontSize: '9px', fontWeight: '800',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid white' }}>
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', bottom: '40px', left: '-180px', width: '320px', background: 'white',
+          border: '1px solid var(--border-strong)', borderRadius: '12px', boxShadow: '0 12px 36px rgba(0,0,0,0.12)', zIndex: 999, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-primary)' }}>🔔 Notifications</span>
+            {unread > 0 && (
+              <button onClick={onMarkAllRead} style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '700', fontFamily: 'var(--font-brand)' }}>
+                Mark all read
+              </button>
+            )}
+          </div>
+          <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+            {notifications.length === 0 && (
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                <div style={{ fontSize: '24px', marginBottom: '8px' }}>🎉</div>All caught up!
+              </div>
+            )}
+            {notifications.map(n => (
+              <div key={n.id} onClick={() => { onClickNotif(n); onMarkRead(n.id); setOpen(false); }}
+                style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer',
+                  background: n.read ? 'transparent' : '#F5F7FF',
+                  display: 'flex', gap: '10px', alignItems: 'flex-start',
+                  transition: 'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#F0F3FF'}
+                onMouseLeave={e => e.currentTarget.style.background = n.read ? 'transparent' : '#F5F7FF'}>
+                <span style={{ fontSize: '18px', flexShrink: 0, marginTop: '1px' }}>{typeIcon[n.type] ?? '🔔'}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '12px', fontWeight: n.read ? '600' : '800', color: 'var(--text-primary)', marginBottom: '2px' }}>{n.title}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.body}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px' }}>{formatSafeDate(n.createdAt)}</div>
+                </div>
+                {!n.read && <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, marginTop: '4px' }} />}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // --- Login Screen ---
 function LoginScreen({ onLogin, onDevLogin }) {
@@ -172,7 +344,7 @@ const BentoStat = ({ label, value, sub, icon: Icon }) => (
 );
 
 // ─── IO Detail Drawer (Comments + Audit Log) ─────────────────────────────────
-function IODetailDrawer({ item, user, onClose, onUpdate, allItems = [] }) {
+function IODetailDrawer({ item, user, onClose, onUpdate, allItems = [], managers = [] }) {
   const { t } = useT();
   const [tab, setTab] = React.useState('overview');
   const [newComment, setNewComment] = React.useState('');
@@ -432,23 +604,22 @@ function IODetailDrawer({ item, user, onClose, onUpdate, allItems = [] }) {
       {/* Comment Input */}
       {tab === 'comments' && (
         <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <textarea
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+            <MentionTextarea
               value={newComment}
-              onChange={e => setNewComment(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) handleAddComment(); }}
-              placeholder={`Add a note about ${item.io}… (⌘↵ to send)`}
-              style={{
-                flex: 1, padding: '10px 12px', border: '1px solid var(--border-strong)',
-                borderRadius: '8px', fontSize: '13px', outline: 'none', resize: 'none',
-                fontFamily: 'var(--font-brand)', lineHeight: '1.5', minHeight: '64px'
-              }}
+              onChange={setNewComment}
+              onPost={handleAddComment}
+              posting={posting}
+              placeholder={`Add a note… type @ to mention someone (⌘↵ to send)`}
+              managers={managers || []}
+              user={user}
+              io={item.io}
             />
             <button
               onClick={handleAddComment}
               disabled={posting || !newComment.trim()}
               className="btn-premium btn-solid"
-              style={{ padding: '0 14px', alignSelf: 'flex-end', opacity: newComment.trim() ? 1 : 0.4 }}
+              style={{ padding: '0 14px', alignSelf: 'flex-end', opacity: newComment.trim() ? 1 : 0.4, flexShrink: 0 }}
             >
               {posting ? '…' : 'Post'}
             </button>
@@ -476,11 +647,13 @@ function App() {
   const [files, setFiles] = useState({ sf: null, tw: null });
   const [useFirestore, setUseFirestore] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('All');   // All | Error | Fixing | Matched
-  const [sortConfig, setSortConfig] = useState({ key: null, dir: 'asc' }); // sortable columns
-  const [drawerItem, setDrawerItem] = useState(null); // IO open in side drawer
-  const [platformFilter, setPlatformFilter] = useState('All'); // All | twitter | meta
-  const [regionFilter, setRegionFilter] = useState('All');     // All | specific region
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [sortConfig, setSortConfig] = useState({ key: null, dir: 'asc' });
+  const [drawerItem, setDrawerItem] = useState(null);
+  const [platformFilter, setPlatformFilter] = useState('All');
+  const [regionFilter, setRegionFilter] = useState('All');
+  const [notifications, setNotifications] = useState([]);
+  const [managers, setManagers] = useState([]);
 
   // --- Auth listener ---
   useEffect(() => {
@@ -507,6 +680,20 @@ function App() {
       console.warn('Firestore unavailable, using mock data:', err);
       setItems(MOCK_RECON_ITEMS);
     }
+    return unsub;
+  }, [firebaseUser, devUser]);
+
+  // --- Notifications listener ---
+  useEffect(() => {
+    if (!firebaseUser) return;
+    const unsub = subscribeToNotifications(firebaseUser.email, setNotifications);
+    return unsub;
+  }, [firebaseUser]);
+
+  // --- Managers listener (used for @mentions) ---
+  useEffect(() => {
+    if (!firebaseUser && !devUser) return;
+    const unsub = subscribeToManagers(setManagers);
     return unsub;
   }, [firebaseUser, devUser]);
 
@@ -686,6 +873,7 @@ function App() {
             item={drawerItem}
             user={user}
             allItems={items}
+            managers={managers}
             onClose={() => setDrawerItem(null)}
             onUpdate={handleItemUpdate}
           />
@@ -746,6 +934,13 @@ function App() {
             <div style={{ fontSize: '12px', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.displayName?.split(' ')[0]}</div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
           </div>
+          <NotificationPanel
+            notifications={notifications}
+            userEmail={user.email}
+            onMarkRead={(id) => markNotificationRead(user.email, id)}
+            onMarkAllRead={() => markAllRead(user.email)}
+            onClickNotif={(n) => { if (n.io) setDrawerItem(items.find(i => i.io === n.io) || null); }}
+          />
           <button onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
             <LogOut size={14} />
           </button>

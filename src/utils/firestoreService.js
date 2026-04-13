@@ -12,6 +12,8 @@ import {
   writeBatch,
   addDoc,
   arrayUnion,
+  where,
+  limit,
 } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -211,4 +213,60 @@ export const saveManager = async (manager) => {
  */
 export const deleteManager = async (managerId) => {
   await deleteDoc(doc(db, MANAGERS_COLLECTION, managerId));
+};
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+const NOTIF_COLLECTION = "notifications";
+
+/**
+ * Create a notification for a specific user.
+ * toEmail — recipient email (used as the Firestore doc key for their subcollection)
+ * notif   — { type, title, body, io?, from }
+ */
+export const createNotification = async (toEmail, notif) => {
+  try {
+    const ref = collection(db, NOTIF_COLLECTION, toEmail, "items");
+    await addDoc(ref, { ...notif, read: false, createdAt: serverTimestamp() });
+  } catch (_) { /* silently fail — non-critical */ }
+};
+
+/**
+ * Subscribe in real-time to a user's notification inbox.
+ * Returns an unsubscribe function.
+ */
+export const subscribeToNotifications = (userEmail, callback) => {
+  try {
+    const q = query(
+      collection(db, NOTIF_COLLECTION, userEmail, "items"),
+      orderBy("createdAt", "desc"),
+      limit(50)
+    );
+    return onSnapshot(q, (snap) => {
+      callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }, () => callback([]));
+  } catch (_) { callback([]); return () => {}; }
+};
+
+/**
+ * Mark a single notification as read.
+ */
+export const markNotificationRead = async (userEmail, notifId) => {
+  try {
+    await updateDoc(doc(db, NOTIF_COLLECTION, userEmail, "items", notifId), { read: true });
+  } catch (_) {}
+};
+
+/**
+ * Mark ALL of a user's unread notifications as read.
+ */
+export const markAllRead = async (userEmail) => {
+  try {
+    const snap = await getDocs(
+      query(collection(db, NOTIF_COLLECTION, userEmail, "items"), where("read", "==", false))
+    );
+    if (snap.empty) return;
+    const batch = writeBatch(db);
+    snap.docs.forEach((d) => batch.update(d.ref, { read: true }));
+    await batch.commit();
+  } catch (_) {}
 };
