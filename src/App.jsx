@@ -195,8 +195,8 @@ function NotificationPanel({ notifications, userEmail, onMarkRead, onMarkAllRead
         )}
       </button>
       {open && (
-        <div style={{ position: 'absolute', bottom: '40px', left: '-180px', width: '320px', background: 'white',
-          border: '1px solid var(--border-strong)', borderRadius: '12px', boxShadow: '0 12px 36px rgba(0,0,0,0.12)', zIndex: 999, overflow: 'hidden' }}>
+        <div style={{ position: 'fixed', left: '228px', bottom: '70px', width: '320px', background: 'white',
+          border: '1px solid var(--border-strong)', borderRadius: '12px', boxShadow: '0 12px 36px rgba(0,0,0,0.14)', zIndex: 9999, overflow: 'hidden' }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-primary)' }}>🔔 Notifications</span>
             {unread > 0 && (
@@ -740,6 +740,16 @@ function App() {
     saveReconciliationRun(reconciled)
       .then(async () => {
         setSaving(false);
+        // Notify current user: file uploaded
+        if (firebaseUser) {
+          const errors = reconciled.filter(i => i.status === 'Error').length;
+          createNotification(firebaseUser.email, {
+            type: 'file_uploaded',
+            title: 'Reconciliation run completed',
+            body: `${reconciled.length} IOs processed — ${errors} error${errors !== 1 ? 's' : ''} found`,
+            from: firebaseUser.email,
+          }).catch(() => {});
+        }
         // Sprint 2: auto-notify if toggle is on
         const notifSettings = (() => { try { return JSON.parse(localStorage.getItem('aleph-recon-notifications')) || {}; } catch { return {}; } })();
         if (notifSettings.rules?.newDiscrepancy) {

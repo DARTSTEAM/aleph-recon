@@ -42,7 +42,7 @@ export const es = {
   'table.io': 'POID del Publisher',
   'table.account': 'Cuenta',
   'table.sfBudget': 'Presupuesto SF',
-  'table.twCost': 'Costo Twitter',
+  'table.twCost': 'Facturación Plataforma',
   'table.discrepancy': 'Discrepancia',
   'table.status': 'Estado',
   'table.resolution': 'Registro de Resolución',
