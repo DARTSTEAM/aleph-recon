@@ -3,7 +3,7 @@ import {
   CreditCard, Upload, Search, Activity, Mail, AlertCircle, FileText,
   RefreshCw, PlusCircle, CheckCircle2, XCircle, Clock, ShieldCheck,
   TrendingDown, Layers, LayoutDashboard, Users, Settings, HelpCircle,
-  Bell, Database, LogOut, FileSpreadsheet, DownloadCloud, ExternalLink
+  Bell, Database, LogOut, FileSpreadsheet, DownloadCloud, ExternalLink, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
