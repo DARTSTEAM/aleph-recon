@@ -501,9 +501,12 @@ function App() {
       })
     : afterRegion;
 
-  const errorCount = items.filter(i => i.status === 'Error').length;
-  const fixingCount = items.filter(i => i.status === 'Fixing').length;
-  const totalVolume = items.reduce((acc, i) => acc + (i.twBilling || 0), 0);
+  const errorCount   = items.filter(i => i.status === 'Error').length;
+  const fixingCount  = items.filter(i => i.status === 'Fixing').length;
+  const totalUSD     = items.filter(i => (i.currency || '').toUpperCase() === 'USD')
+                            .reduce((acc, i) => acc + (i.twBilling || 0), 0);
+  const totalARS     = items.filter(i => !i.currency || i.currency.toUpperCase() === 'ARS')
+                            .reduce((acc, i) => acc + (i.twBilling || 0), 0);
 
 
   return (
@@ -616,7 +619,16 @@ function App() {
         {activeView === 'dashboard' && <>
         {/* KPI Bento Grid */}
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem', marginBottom: '2.5rem' }}>
-          <BentoStat label={t('kpi.settledVolume')} value={`$${(totalVolume / 1_000_000).toFixed(1)}M`} sub={t('kpi.settledVolume.sub')} icon={CreditCard} />
+          <BentoStat
+            label={t('kpi.settledVolume')}
+            value={totalARS > 0 ? `$${(totalARS / 1_000_000).toFixed(1)}M` : `$${(totalUSD / 1_000).toFixed(1)}K`}
+            sub={
+              totalARS > 0 && totalUSD > 0
+                ? `ARS · USD $${(totalUSD / 1_000).toFixed(1)}K`
+                : totalARS > 0 ? 'ARS spend' : 'USD spend'
+            }
+            icon={CreditCard}
+          />
           <BentoStat label={t('kpi.unresolvedErrors')} value={errorCount} sub={t('kpi.unresolvedErrors.sub', { n: fixingCount })} icon={AlertCircle} />
           <BentoStat label={t('kpi.followUpsSent')} value={fixingCount} sub={t('kpi.followUpsSent.sub')} icon={Mail} />
           <BentoStat label={t('kpi.matchRate')} value={`${items.length > 0 ? ((items.filter(i => i.status === 'Matched').length / items.length) * 100).toFixed(0) : 0}%`} sub={t('kpi.matchRate.sub')} icon={ShieldCheck} />
@@ -797,8 +809,8 @@ function App() {
                     <td style={{ fontWeight: '600' }}>{item.currency && item.currency !== 'USD' ? item.currency + ' ' : '$'}{(item.sfBudget || 0).toLocaleString('es-AR')}</td>
                     <td style={{ fontWeight: '600' }}>{item.currency && item.currency !== 'USD' ? item.currency + ' ' : '$'}{(item.twBilling || 0).toLocaleString('es-AR')}</td>
                     <td>
-                      {item.diff !== 0
-                        ? <span style={{ color: 'var(--accent-error)', fontWeight: '800' }}>-{item.currency ? item.currency + ' ' : '$'}{Math.abs(item.diff || 0).toLocaleString('es-AR')}</span>
+                      {Math.abs(item.diff || 0) > 1
+                        ? <span style={{ color: 'var(--accent-error)', fontWeight: '800' }}>-{item.currency ? item.currency + ' ' : '$'}{Math.abs(item.diff || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                         : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>
                     <td>
