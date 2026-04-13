@@ -172,15 +172,33 @@ const BentoStat = ({ label, value, sub, icon: Icon }) => (
 );
 
 // ─── IO Detail Drawer (Comments + Audit Log) ─────────────────────────────────
-function IODetailDrawer({ item, user, onClose, onUpdate }) {
+function IODetailDrawer({ item, user, onClose, onUpdate, allItems = [] }) {
   const { t } = useT();
-  const [tab, setTab] = React.useState('comments');
+  const [tab, setTab] = React.useState('overview');
   const [newComment, setNewComment] = React.useState('');
   const [posting, setPosting] = React.useState(false);
 
   if (!item) return null;
   const comments = item.comments || [];
   const auditLog = item.auditLog || [];
+
+  // Cross-IO stats for same account
+  const sameAccount = allItems.filter(i => i.account === item.account && i.io !== item.io);
+  const acctTotal   = allItems.filter(i => i.account === item.account);
+  const acctErrors  = acctTotal.filter(i => i.status === 'Error').length;
+  const acctMatched = acctTotal.filter(i => i.status === 'Matched').length;
+  const healthPct   = acctTotal.length > 0 ? Math.round((acctMatched / acctTotal.length) * 100) : 100;
+
+  // Bar chart: sf vs billing
+  const maxVal = Math.max(item.sfBudget || 0, item.twBilling || 0, 1);
+  const sfPct  = Math.min(((item.sfBudget  || 0) / maxVal) * 100, 100);
+  const twPct  = Math.min(((item.twBilling || 0) / maxVal) * 100, 100);
+  const diffPct = item.sfBudget > 0 ? ((Math.abs(item.diff || 0) / item.sfBudget) * 100).toFixed(1) : '0';
+
+  const PLATFORM_COLOR = { twitter: '#1a1a1a', criteo: '#F96900', meta: '#1877F2' };
+  const pColor = PLATFORM_COLOR[item.platform] || '#6366F1';
+  const curr   = item.currency || 'ARS';
+  const fmt    = (n) => (n || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   const handleAddComment = async () => {
     const text = newComment.trim();
@@ -189,10 +207,8 @@ function IODetailDrawer({ item, user, onClose, onUpdate }) {
     const entry = { text, author: user.email };
     try {
       await addComment(item.io, entry);
-      // Optimistic local update
       onUpdate(item.io, { comments: [...comments, { ...entry, timestamp: new Date().toISOString() }] });
     } catch (_) {
-      // Firestore unavailable — update locally
       onUpdate(item.io, { comments: [...comments, { ...entry, timestamp: new Date().toISOString() }] });
     }
     setNewComment('');
@@ -200,7 +216,7 @@ function IODetailDrawer({ item, user, onClose, onUpdate }) {
   };
 
   const tabStyle = (active) => ({
-    padding: '8px 18px', borderRadius: '8px', fontSize: '12px', fontWeight: '700',
+    padding: '7px 14px', borderRadius: '8px', fontSize: '11px', fontWeight: '700',
     cursor: 'pointer', border: 'none', transition: 'all 0.15s', fontFamily: 'var(--font-brand)',
     background: active ? 'var(--primary)' : 'transparent',
     color: active ? 'white' : 'var(--text-muted)'
@@ -218,7 +234,7 @@ function IODetailDrawer({ item, user, onClose, onUpdate }) {
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 28, stiffness: 300 }}
       style={{
-        position: 'fixed', top: 0, right: 0, bottom: 0, width: '420px',
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: '460px',
         background: 'white', borderLeft: '1px solid var(--border-subtle)',
         boxShadow: '-12px 0 40px rgba(0,0,0,0.08)', zIndex: 900,
         display: 'flex', flexDirection: 'column', overflow: 'hidden'
@@ -227,23 +243,139 @@ function IODetailDrawer({ item, user, onClose, onUpdate }) {
       {/* Header */}
       <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-          <div>
-            <div style={{ fontWeight: '800', fontSize: '15px', color: 'var(--primary)' }}>{item.io}</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{item.account}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <div style={{ fontWeight: '800', fontSize: '15px', color: 'var(--primary)' }}>{item.io}</div>
+              <span style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '800',
+                background: `${pColor}15`, color: pColor, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {item.platform || 'twitter'}
+              </span>
+              {item.currency && (
+                <span style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '800',
+                  background: '#F0F3FF', color: 'var(--primary)' }}>{item.currency}</span>
+              )}
+            </div>
+            <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.account}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Mgr: {item.manager} {item.country ? `· ${item.country}` : ''}</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', flexShrink: 0 }}>
             <X size={18} />
           </button>
         </div>
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '4px', background: '#F5F6FA', borderRadius: '10px', padding: '4px' }}>
-          <button style={tabStyle(tab === 'comments')} onClick={() => setTab('comments')}>💬 Comments ({comments.length})</button>
-          <button style={tabStyle(tab === 'log')} onClick={() => setTab('log')}>📋 Audit Log ({auditLog.length})</button>
+        <div style={{ display: 'flex', gap: '3px', background: '#F5F6FA', borderRadius: '10px', padding: '3px' }}>
+          <button style={tabStyle(tab === 'overview')} onClick={() => setTab('overview')}>📊 Overview</button>
+          <button style={tabStyle(tab === 'comments')} onClick={() => setTab('comments')}>💬 {comments.length > 0 ? `${comments.length}` : 'Notes'}</button>
+          <button style={tabStyle(tab === 'log')} onClick={() => setTab('log')}>📋 Log {auditLog.length > 0 ? `(${auditLog.length})` : ''}</button>
         </div>
       </div>
 
       {/* Body */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem' }}>
+
+        {/* ── OVERVIEW TAB ───────────────────────────────────────────────── */}
+        {tab === 'overview' && (
+          <>
+            {/* Status badge */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+              {[
+                { label: item.status, color: item.status === 'Matched' ? '#10B981' : item.status === 'Fixing' ? '#F59E0B' : '#EF4444',
+                  bg: item.status === 'Matched' ? '#F0FDF4' : item.status === 'Fixing' ? '#FFFBEB' : '#FEF2F2' },
+              ].map(s => (
+                <span key={s.label} style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '800', color: s.color, background: s.bg }}>
+                  {s.label === 'Matched' ? '✓ Matched' : s.label === 'Fixing' ? '⏳ Fixing' : '⚠ Error'}
+                </span>
+              ))}
+              {item.category && <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', color: '#6B7280', background: '#F9FAFB' }}>{t(item.category)}</span>}
+            </div>
+
+            {/* Financial comparison */}
+            <div style={{ background: '#FAFBFF', borderRadius: '12px', padding: '1rem', marginBottom: '1rem', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '12px' }}>Financial Breakdown</div>
+              {/* SF Budget bar */}
+              <div style={{ marginBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: '700', color: '#1D4ED8' }}>SF Budget</span>
+                  <span style={{ fontWeight: '800', color: 'var(--text-primary)' }}>{curr} {fmt(item.sfBudget)}</span>
+                </div>
+                <div style={{ height: '6px', borderRadius: '999px', background: '#EEF0F8', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${sfPct}%`, background: '#3B82F6', borderRadius: '999px', transition: 'width 0.5s ease' }} />
+                </div>
+              </div>
+              {/* Billing bar */}
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: '700', color: pColor }}>{item.platform === 'criteo' ? 'Criteo' : item.platform === 'meta' ? 'Meta' : 'Twitter/X'} Billing</span>
+                  <span style={{ fontWeight: '800', color: 'var(--text-primary)' }}>{curr} {fmt(item.twBilling)}</span>
+                </div>
+                <div style={{ height: '6px', borderRadius: '999px', background: '#EEF0F8', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${twPct}%`, background: pColor, borderRadius: '999px', transition: 'width 0.5s ease' }} />
+                </div>
+              </div>
+              {/* Diff */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '8px',
+                background: Math.abs(item.diff || 0) > 1 ? '#FEF2F2' : '#F0FDF4', border: `1px solid ${Math.abs(item.diff || 0) > 1 ? '#FCA5A5' : '#BBF7D0'}` }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: Math.abs(item.diff || 0) > 1 ? '#DC2626' : '#16A34A' }}>Discrepancy</span>
+                <span style={{ fontSize: '13px', fontWeight: '800', color: Math.abs(item.diff || 0) > 1 ? '#DC2626' : '#16A34A' }}>
+                  {Math.abs(item.diff || 0) > 1 ? `-${curr} ${fmt(Math.abs(item.diff))} (${diffPct}%)` : '— None'}
+                </span>
+              </div>
+            </div>
+
+            {/* Account health across all IOs */}
+            <div style={{ background: '#FAFBFF', borderRadius: '12px', padding: '1rem', marginBottom: '1rem', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '12px' }}>Account Health</div>
+              {/* Health bar */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                <div style={{ flex: 1, height: '8px', borderRadius: '999px', background: '#EEF0F8', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${healthPct}%`,
+                    background: healthPct >= 90 ? '#10B981' : healthPct >= 60 ? '#F59E0B' : '#EF4444',
+                    borderRadius: '999px', transition: 'width 0.6s ease' }} />
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: '800',
+                  color: healthPct >= 90 ? '#10B981' : healthPct >= 60 ? '#F59E0B' : '#EF4444' }}>{healthPct}%</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: sameAccount.length > 0 ? '12px' : '0' }}>
+                <span style={{ color: '#10B981', fontWeight: '700' }}>✓ {acctMatched} matched</span>
+                {acctErrors > 0 && <span style={{ color: '#EF4444', fontWeight: '700' }}>⚠ {acctErrors} errors</span>}
+                <span>· {acctTotal.length} IOs total in this period</span>
+              </div>
+              {/* Other IOs for same account */}
+              {sameAccount.length > 0 && (
+                <div style={{ marginTop: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '6px' }}>Other IOs this period:</div>
+                  {sameAccount.slice(0, 4).map(io => (
+                    <div key={io.io} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '6px 8px', borderRadius: '6px', background: 'white', border: '1px solid var(--border-subtle)', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--primary)' }}>{io.io}</span>
+                      <span style={{
+                        fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '20px',
+                        color: io.status === 'Matched' ? '#10B981' : io.status === 'Fixing' ? '#F59E0B' : '#EF4444',
+                        background: io.status === 'Matched' ? '#F0FDF4' : io.status === 'Fixing' ? '#FFFBEB' : '#FEF2F2'
+                      }}>{io.status}</span>
+                    </div>
+                  ))}
+                  {sameAccount.length > 4 && <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '4px' }}>+{sameAccount.length - 4} more</div>}
+                </div>
+              )}
+            </div>
+
+            {/* Quick meta info */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              {[
+                { label: 'Manager',        value: item.manager || 'Admin' },
+                { label: 'Currency',       value: curr },
+                { label: 'Country',        value: item.country || '—' },
+                { label: 'Invoice #',      value: item.invoiceNumber || '—' },
+              ].map(m => (
+                <div key={m.label} style={{ padding: '10px 12px', borderRadius: '8px', background: '#F8F9FF', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>{m.label}</div>
+                  <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>{m.value}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
         {tab === 'comments' && (
           <>
             {comments.length === 0 && (
@@ -553,6 +685,7 @@ function App() {
           <IODetailDrawer
             item={drawerItem}
             user={user}
+            allItems={items}
             onClose={() => setDrawerItem(null)}
             onUpdate={handleItemUpdate}
           />
