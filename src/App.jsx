@@ -19,6 +19,41 @@ import HelpView from './views/HelpView';
 import { sendFollowUpEmail, sendBulkFollowUpEmails, checkApiHealth } from './utils/apiService';
 import { useT } from './i18n/index.jsx';
 
+// ─── safeDate: handles ISO strings AND Firestore Timestamp objects ─────────────────
+const safeDate = (val) => {
+  if (!val) return null;
+  // Firestore Timestamp object
+  if (val && typeof val.toDate === 'function') return val.toDate();
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+};
+const formatSafeDate = (val) => {
+  const d = safeDate(val);
+  if (!d) return '—';
+  return d.toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+};
+
+// ─── ErrorBoundary: prevents full blank-page crashes ─────────────────────────────
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, err: null };
+  static getDerivedStateFromError(err) { return { hasError: true, err }; }
+  componentDidCatch(err, info) { console.error('[ErrorBoundary]', err, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', background: '#F8F9FF', fontFamily: 'var(--font-brand, sans-serif)' }}>
+          <div style={{ fontSize: '32px' }}>⚠️</div>
+          <div style={{ fontWeight: '800', fontSize: '18px', color: '#1a1a3e' }}>Algo salió mal</div>
+          <div style={{ color: '#6B7280', fontSize: '13px', maxWidth: '360px', textAlign: 'center' }}>{String(this.state.err?.message || this.state.err)}</div>
+          <button onClick={() => this.setState({ hasError: false, err: null })} style={{ padding: '10px 24px', borderRadius: '8px', background: 'var(--primary, #4F46E5)', color: 'white', border: 'none', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>Volver a intentar</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+export { ErrorBoundary };
+
 const MOCK_RECON_ITEMS = [
   { id: '1', io: 'TW-50473210', account: "L'Oréal Argentina", manager: 'Mariana Tunno', sfBudget: 12500, twBilling: 12500, diff: 0, status: 'Matched', category: 'recon.category.budget' },
   { id: '2', io: 'TW-10573655', account: 'Mercado Libre MEX', manager: 'Silvia Rodriguez', sfBudget: 45200, twBilling: 48900.50, diff: -3700.50, status: 'Error', category: 'recon.category.taxes', comment: 'recon.discrepancyMsg', commentParams: { diff: '-$3,700.50' } },
@@ -227,7 +262,7 @@ function IODetailDrawer({ item, user, onClose, onUpdate }) {
                     <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>{c.author}</span>
                   </div>
                   <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                    {new Date(c.timestamp).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                     {formatSafeDate(c.timestamp)}
                   </span>
                 </div>
                 <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: '1.5' }}>{c.text}</div>
@@ -253,7 +288,7 @@ function IODetailDrawer({ item, user, onClose, onUpdate }) {
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{entry.note}</div>
                   <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px' }}>
-                    {entry.actor} · {new Date(entry.timestamp).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                   {entry.actor} · {formatSafeDate(entry.timestamp)}
                   </div>
                 </div>
               </div>

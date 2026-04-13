@@ -361,7 +361,18 @@ export const reconcileData = (sfData, twData) => {
     });
   });
 
-  return result;
+  // ── Deduplicate by IO key ──────────────────────────────────────────────────
+  // If the same PPO ID appears in multiple SF rows (e.g. same account with two
+  // line items), reconcileData pushes two items with the same io. Keep the one
+  // with the highest sfBudget; if amounts are equal, keep the most-complete one.
+  const dedupMap = new Map();
+  for (const item of result) {
+    const existing = dedupMap.get(item.io);
+    if (!existing || item.sfBudget > existing.sfBudget) {
+      dedupMap.set(item.io, item);
+    }
+  }
+  return Array.from(dedupMap.values());
 };
 
 // ─── Public: readCriteoReconc ─────────────────────────────────────────────────
