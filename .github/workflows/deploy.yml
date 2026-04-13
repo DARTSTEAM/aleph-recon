@@ -109,3 +109,39 @@ jobs:
             --set-secrets "GMAIL_USER=aleph-gmail-user:latest,GMAIL_APP_PASSWORD=aleph-gmail-app-password:latest,API_KEY=aleph-api-key:latest,CRON_SECRET=aleph-cron-secret:latest" \
             --set-env-vars "ALLOWED_ORIGINS=https://aleph-automation-966549276703.us-central1.run.app,ESCALATION_EMAIL=regional-director@alephholding.com,WEEKLY_SUMMARY_EMAIL=regional-director@alephholding.com" \
             --quiet
+
+  deploy-hosting:
+    name: Deploy to Firebase Hosting
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for production
+        run: npm run build
+        env:
+          VITE_API_URL: https://aleph-recon-api-gvxb4rjzvq-uc.a.run.app
+          VITE_API_KEY: ${{ secrets.ALEPH_API_KEY }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Deploy to Firebase Hosting
+        run: npx firebase-tools@latest deploy --only hosting --project hike-agentic-playground --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
