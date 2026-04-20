@@ -25,6 +25,8 @@ export const es = {
   'auth.title': 'Aleph Recon Studio',
   'auth.subtitle': 'Reconciliación de ingresos para campañas Twitter (X) en LATAM',
   'auth.loginGoogle': 'Ingresar con Google',
+  'auth.restrictedProp': 'Solo acceso autorizado. Usá tu email de Aleph (@alephholding.com o @alephdigital.com).',
+  'auth.invalidDomain': 'Acceso denegado: Por favor usá un correo @alephholding.com o @alephdigital.com.',
   'auth.loginAdmin': 'Ingresar como Admin',
   'auth.loginAdminSub': 'Acceso de prueba — admin / admin',
 

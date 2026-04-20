@@ -1,4 +1,5 @@
-# React + Vite
+## Authentication
+Access is restricted to users with `@alephholding.com` or `@alephdigital.com` email addresses via Google Sign-In.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

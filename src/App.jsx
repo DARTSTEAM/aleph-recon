@@ -236,7 +236,7 @@ function NotificationPanel({ notifications, userEmail, onMarkRead, onMarkAllRead
 }
 
 // --- Login Screen ---
-function LoginScreen({ onLogin, onDevLogin }) {
+function LoginScreen({ onLogin, onDevLogin, authError }) {
   const { t, toggleLang, lang } = useT();
   const [creds, setCreds] = useState({ user: '', pass: '' });
   const [error, setError] = useState('');
@@ -250,6 +250,8 @@ function LoginScreen({ onLogin, onDevLogin }) {
       setTimeout(() => setError(''), 2000);
     }
   };
+
+  const loginError = error || (authError ? t(authError) : null);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-app)' }}>
@@ -273,7 +275,7 @@ function LoginScreen({ onLogin, onDevLogin }) {
         </p>
 
         {/* Google Sign In */}
-        <button onClick={onLogin} className="btn-premium btn-solid" style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: '14px', marginBottom: '1.5rem' }}>
+        <button onClick={onLogin} className="btn-premium btn-solid" style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: '14px', marginBottom: '1rem' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -282,6 +284,12 @@ function LoginScreen({ onLogin, onDevLogin }) {
           </svg>
           {t('auth.loginGoogle')}
         </button>
+
+        {authError && (
+          <div style={{ marginBottom: '1.5rem', padding: '10px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#EF4444', fontSize: '12px', fontWeight: '600' }}>
+            {t(authError)}
+          </div>
+        )}
 
         {/* Divider */}
         {/* Dev Login - hidden in production, use Google Sign In above */}
@@ -634,7 +642,8 @@ function IODetailDrawer({ item, user, onClose, onUpdate, allItems = [], managers
 function App() {
   const { t, lang, toggleLang } = useT();
   const [firebaseUser, setFirebaseUser] = useState(null);
-  const [devUser, setDevUser] = useState(false);
+  const [authError, setAuthError]       = useState(null);
+  const [devUser, setDevUser]           = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [activeView, setActiveView] = useState('dashboard');
   const [apiStatus, setApiStatus] = useState(null); // null | 'ok' | 'no-email' | 'down'
@@ -658,7 +667,19 @@ function App() {
   // --- Auth listener ---
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
-      setFirebaseUser(u);
+      if (u && u.email) {
+        const domain = u.email.split('@')[1];
+        if (domain === 'alephholding.com' || domain === 'alephdigital.com') {
+          setFirebaseUser(u);
+          setAuthError(null);
+        } else {
+          signOut(auth);
+          setFirebaseUser(null);
+          setAuthError('auth.invalidDomain');
+        }
+      } else {
+        setFirebaseUser(u);
+      }
       setAuthLoading(false);
     });
   }, []);
@@ -819,7 +840,7 @@ function App() {
     </div>
   );
 
-  if (!user) return <LoginScreen onLogin={handleLogin} onDevLogin={handleDevLogin} />;
+  if (!user) return <LoginScreen onLogin={handleLogin} onDevLogin={handleDevLogin} authError={authError} />;
 
   const handleSort = (key) => {
     setSortConfig(prev =>

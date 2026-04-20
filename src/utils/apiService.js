@@ -115,5 +115,7 @@ function guessEmail(name = '') {
     .replace(/[^a-z\s.]/g, '')
     .trim()
     .replace(/\s+/g, '.');
-  return `${normalized}@alephholding.com`;
+  // Default domain fallback
+  const domain = 'alephholding.com'; 
+  return `${normalized}@${domain}`;
 }

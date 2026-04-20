@@ -313,7 +313,9 @@ app.post('/api/scheduled/reminders', requireCronSecret, async (req, res) => {
     const batch = db.batch();
 
     for (const item of toRemind) {
-      const managerEmail = item.managerEmail || `${(item.manager||'').toLowerCase().replace(/\s+/g,'.').replace(/[^a-z.]/g,'')}@alephholding.com`;
+      // Default domain for managers without explicit email
+      const defaultDomain = (process.env.INBOUND_EMAIL_DOMAIN || 'alephholding.com').split(',')[0].trim();
+      const managerEmail = item.managerEmail || `${(item.manager||'').toLowerCase().replace(/\s+/g,'.').replace(/[^a-z.]/g,'')}@${defaultDomain}`;
 
       if (transporter) {
         emailPromises.push(

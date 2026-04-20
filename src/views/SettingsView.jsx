@@ -179,7 +179,7 @@ export default function SettingsView() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
           <Field label="Mailgun Inbound Webhook URL" stateKey="mailgunWebhookUrl" value={cfg.mailgunWebhookUrl || ''} onChange={setField} placeholder="https://your-api/api/inbound-email" />
-          <Field label="Inbound Email Domain" stateKey="inboundEmailDomain" value={cfg.inboundEmailDomain || 'alephholding.com'} onChange={setField} />
+          <Field label="Inbound Email Domain" stateKey="inboundEmailDomain" value={cfg.inboundEmailDomain || 'alephholding.com, alephdigital.com'} onChange={setField} />
         </div>
       </Section>
 
