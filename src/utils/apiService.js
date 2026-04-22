@@ -3,7 +3,7 @@
  * Calls the backend Cloud Run API for email sending and other operations.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://aleph-recon-api-4772ziyq2a-uc.a.run.app';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://aleph-recon-api-966549276703.us-central1.run.app';
 const API_KEY = import.meta.env.VITE_API_KEY || '';
 
 const authHeaders = () => ({

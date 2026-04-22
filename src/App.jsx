@@ -669,7 +669,7 @@ function App() {
     return onAuthStateChanged(auth, (u) => {
       if (u && u.email) {
         const domain = u.email.split('@')[1];
-        if (domain === 'alephholding.com' || domain === 'alephdigital.com') {
+        if (domain === 'alephholding.com' || domain === 'alephdigital.com' || domain === 'abndigital.com.ar') {
           setFirebaseUser(u);
           setAuthError(null);
         } else {
