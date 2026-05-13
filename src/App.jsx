@@ -668,8 +668,9 @@ function App() {
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
       if (u && u.email) {
-        const domain = u.email.split('@')[1];
-        if (domain === 'alephholding.com' || domain === 'alephdigital.com' || domain === 'abndigital.com.ar') {
+        const domain = u.email.split('@')[1].toLowerCase();
+        const allowedDomains = ['alephholding.com', 'alephdigital.com', 'abndigital.com.ar', 'abndigital.com'];
+        if (allowedDomains.includes(domain)) {
           setFirebaseUser(u);
           setAuthError(null);
         } else {

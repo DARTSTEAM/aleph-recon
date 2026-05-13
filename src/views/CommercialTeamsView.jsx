@@ -15,8 +15,8 @@ import {
 const SEED_MANAGERS = [
   { name: 'Mariana Tunno',   email: 'mariana.tunno@alephholding.com',   region: 'LATAM South' },
   { name: 'Silvia Rodriguez', email: 'silvia.rodriguez@alephholding.com', region: 'LATAM North' },
-  { name: 'Santiago G.',      email: 'santiago.g@alephholding.com',       region: 'Brazil'      },
   { name: 'Bautista B.',      email: 'bautista.b@alephholding.com',       region: 'Andean'      },
+  { name: 'Martin ABN',       email: 'martin.abn@abndigital.com.ar',      region: 'Argentina'   },
 ];
 
 const REGIONS = ['LATAM South', 'LATAM North', 'Brazil', 'Andean', 'Mexico', 'APAC', 'EMEA', 'Africa'];
